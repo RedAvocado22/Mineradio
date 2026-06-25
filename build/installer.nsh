@@ -269,14 +269,24 @@ Function MineradioWriteInstallMarker
   FileWrite $0 "Mineradio install root marker.$\r$\n"
   FileClose $0
 FunctionEnd
+!endif
 
+!ifdef BUILD_UNINSTALLER
 Function un.MineradioAbortUnsafeUninstallRoot
+  ${GetFileName} "$INSTDIR" $0
+  ${If} $0 != "Mineradio"
+  ${AndIf} $0 != "mineradio"
+    MessageBox MB_ICONSTOP|MB_OK "卸载已中止：$INSTDIR 不是 Mineradio 专用安装目录。为避免误删用户文件，请手动删除 Mineradio 程序文件。"
+    Abort
+  ${EndIf}
   IfFileExists "$INSTDIR\${MINERADIO_INSTALL_MARKER}" safe 0
   MessageBox MB_ICONSTOP|MB_OK "卸载已中止：$INSTDIR 不是 Mineradio 专用安装目录，缺少安全标记 ${MINERADIO_INSTALL_MARKER}。为避免误删用户文件，请手动删除 Mineradio 程序文件。"
   Abort
 safe:
 FunctionEnd
+!endif
 
+!ifndef BUILD_UNINSTALLER
 Function MineradioWelcomeShow
   Call MineradioUsePreferredInstallDir
 
