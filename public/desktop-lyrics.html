@@ -90,7 +90,7 @@
       line-height:var(--lyric-line-height);
       letter-spacing:var(--lyric-letter-spacing);
       text-align:center;
-      white-space:nowrap;
+      white-space:pre-line;
       overflow:visible;
       text-overflow:clip;
       padding:.20em .12em .34em;
@@ -569,11 +569,18 @@
     function measureLineWidth(fontSize) {
       ctx.save();
       ctx.font = state.fontWeight + ' ' + fontSize + 'px ' + state.fontFamily;
-      var text = line.textContent || 'Mineradio';
-      var width = ctx.measureText(text).width;
+      var rows = String(line.textContent || 'Mineradio').split(/\n/).filter(Boolean);
+      if (!rows.length) rows = ['Mineradio'];
+      var width = 1;
+      rows.forEach(function(text){
+        var rowWidth = ctx.measureText(text).width + Math.max(0, Array.from(text).length - 1) * fontSize * state.letterSpacing;
+        width = Math.max(width, rowWidth);
+      });
       ctx.restore();
-      width += Math.max(0, Array.from(text).length - 1) * fontSize * state.letterSpacing;
       return Math.max(1, width);
+    }
+    function currentLyricLineCount() {
+      return Math.max(1, String(line.textContent || '').split(/\n/).filter(Boolean).length);
     }
     function lyricScrollInitialHoldMs() {
       return Math.round(clamp(state.progressSpan * 130, 140, 520, 320));
@@ -612,7 +619,7 @@
       var maxScrollableWidth = readableWidth * 1.76;
       for (var i = 0; i < 24; i++) {
         var width = measureLineWidth(size);
-        var height = size * state.lineHeight;
+        var height = size * state.lineHeight * currentLyricLineCount();
         if ((width <= maxScrollableWidth && height <= maxHeight) || size <= minSize) break;
         size = Math.max(minSize, size - Math.max(1.25, size * .062));
       }
@@ -725,7 +732,13 @@
       if (motion.beatGlow != null) state.beatGlow = motion.beatGlow;
       if (motion.beatPulse != null) state.beatPulse = motion.beatPulse;
       if (motion.bass != null) state.bass = motion.bass;
-      var text = String(state.text || 'Mineradio').replace(/\s+/g, ' ').trim() || 'Mineradio';
+      var text = String(state.text || 'Mineradio')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .map(function(line){ return line.replace(/[ \t]+/g, ' ').trim(); })
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('\n') || 'Mineradio';
       baseFontSize = Math.round(58 * clamp(state.size, .72, 1.55, 1));
       state.progress = clamp(state.progress, 0, 1, 0);
       state.progressSpan = clamp(state.progressSpan, .75, 18, 4.8);

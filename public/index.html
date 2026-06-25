@@ -2795,6 +2795,9 @@ var VISUAL_GUIDE_SEEN_STORE_KEY = 'mineradio-visual-guide-seen-v2';
 var LOCAL_BEATMAP_STORE_KEY = 'mineradio-local-beatmaps-v1';
 var LOCAL_BEAT_PREF_STORE_KEY = 'mineradio-local-beatmap-prefs-v1';
 var LOCAL_LIBRARY_FOLDER_STORE_KEY = 'mineradio-local-library-folder-v1';
+var LOCAL_ASSET_CACHE_DB_NAME = 'mineradio-local-assets-v1';
+var LOCAL_ASSET_CACHE_STORE = 'assets';
+var LOCAL_ASSET_CACHE_SCHEMA = 1;
 var LOCAL_BEAT_COMBOS = ['', 'downbeat', 'push', 'drop', 'rebound', 'accent'];
 var HOTKEY_ACTIONS = [
   { key:'togglePlay', label:'播放 / 暂停', category:'播放', local:'Space', global:'Ctrl+Alt+Space' },
@@ -2824,6 +2827,8 @@ var localLibraryProcessToken = 0;
 var localLibraryProcessing = { active:false, token:0, total:0, assetsDone:0 };
 var localLibraryProgressHideTimer = null;
 var localAssetUiRefreshTimer = null;
+var localAssetCacheMemory = {};
+var localAssetCacheWriteTimers = {};
 var LOCAL_ASSET_LIGHT_SCAN_BYTES = 4 * 1024 * 1024;
 var LOCAL_ASSET_IDLE_DELAY_MS = 520;
 var LOCAL_ASSET_PLAYING_DELAY_MS = 1800;
@@ -8099,6 +8104,180 @@ async function getCustomBackgroundBlob(id) {
     tx.oncomplete = function(){ db.close(); };
   });
 }
+function openLocalAssetCacheDb() {
+  return new Promise(function(resolve, reject){
+    if (!window.indexedDB) { reject(new Error('indexedDB unavailable')); return; }
+    var req = indexedDB.open(LOCAL_ASSET_CACHE_DB_NAME, 1);
+    req.onupgradeneeded = function(){
+      var db = req.result;
+      if (!db.objectStoreNames.contains(LOCAL_ASSET_CACHE_STORE)) db.createObjectStore(LOCAL_ASSET_CACHE_STORE, { keyPath: 'id' });
+    };
+    req.onsuccess = function(){ resolve(req.result); };
+    req.onerror = function(){ reject(req.error || new Error('indexedDB open failed')); };
+  });
+}
+function localAssetFileSignature(file) {
+  if (!file) return '';
+  return [
+    localFullPath(file) || localFilePath(file) || (file && file.name) || '',
+    localFileSize(file),
+    file && file.lastModified || 0
+  ].join(':');
+}
+function localAssetCacheKey(song) {
+  return song && song.localKey ? String(song.localKey) : '';
+}
+function localAssetCacheSnapshot(song) {
+  var key = localAssetCacheKey(song);
+  if (!key) return null;
+  updateLocalAudioQualityInfo(song);
+  return {
+    id: key,
+    schema: LOCAL_ASSET_CACHE_SCHEMA,
+    savedAt: Date.now(),
+    name: song.name || '',
+    artist: song.artist || '',
+    album: song.album || '',
+    albumArtist: song.albumArtist || '',
+    trackNumber: song.trackNumber || '',
+    year: song.year || '',
+    localMetadataLoaded: !!song.localMetadataLoaded,
+    duration: Number(song.duration) || 0,
+    localFormat: song.localFormat || '',
+    localFileSize: Number(song.localFileSize) || 0,
+    localBitrateKbps: Number(song.localBitrateKbps) || 0,
+    localLyricFileName: song.localLyricFileName || '',
+    localLyricTagName: song.localLyricTagName || '',
+    localLyricText: song.localLyricText || '',
+    localLyricLoaded: !!song.localLyricLoaded,
+    localLyricLightScanned: !!song.localLyricLightScanned,
+    localLyricFileSignature: localAssetFileSignature(song.localLyricFile),
+    localLyricSource: song.localLyricFile ? 'file' : (song.localLyricTagName ? 'embedded' : (song.localLyricLoaded ? 'none' : '')),
+    localCoverFileName: song.localCoverFileName || '',
+    localCoverDataUrl: song.localCoverDataUrl || '',
+    localCoverLoaded: !!song.localCoverLoaded,
+    localCoverLightScanned: !!song.localCoverLightScanned,
+    localCoverFileSignature: localAssetFileSignature(song.localCoverFile),
+    localCoverSource: song.localCoverFile ? 'file' : (song.localCoverDataUrl ? 'embedded' : (song.localCoverLoaded ? 'none' : ''))
+  };
+}
+async function readLocalAssetCacheRecords(keys) {
+  keys = (keys || []).filter(Boolean);
+  if (!keys.length) return {};
+  var db = await openLocalAssetCacheDb();
+  return new Promise(function(resolve, reject){
+    var out = {};
+    var tx = db.transaction(LOCAL_ASSET_CACHE_STORE, 'readonly');
+    var store = tx.objectStore(LOCAL_ASSET_CACHE_STORE);
+    keys.forEach(function(key){
+      var req = store.get(key);
+      req.onsuccess = function(){
+        if (req.result && req.result.id) out[key] = req.result;
+      };
+    });
+    tx.oncomplete = function(){ db.close(); resolve(out); };
+    tx.onerror = function(){ db.close(); reject(tx.error || new Error('indexedDB read failed')); };
+  });
+}
+async function putLocalAssetCacheRecord(record) {
+  if (!record || !record.id) return false;
+  var db = await openLocalAssetCacheDb();
+  return new Promise(function(resolve, reject){
+    var tx = db.transaction(LOCAL_ASSET_CACHE_STORE, 'readwrite');
+    tx.objectStore(LOCAL_ASSET_CACHE_STORE).put(record);
+    tx.oncomplete = function(){ db.close(); resolve(true); };
+    tx.onerror = function(){ db.close(); reject(tx.error || new Error('indexedDB put failed')); };
+  });
+}
+function applyLocalAssetCacheToSong(song, record) {
+  if (!song || !record || record.id !== song.localKey) return false;
+  var changed = false;
+  if (record.localMetadataLoaded) {
+    ['name', 'artist', 'album', 'albumArtist', 'trackNumber', 'year'].forEach(function(key){
+      if (Object.prototype.hasOwnProperty.call(record, key) && song[key] !== record[key]) {
+        song[key] = record[key] || '';
+        changed = true;
+      }
+    });
+    song.localMetadataLoaded = true;
+  }
+  ['duration', 'localFormat', 'localFileSize', 'localBitrateKbps'].forEach(function(key){
+    if (record[key] && !song[key]) {
+      song[key] = record[key];
+      changed = true;
+    }
+  });
+  var lyricFileSig = localAssetFileSignature(song.localLyricFile);
+  var canUseLyricCache = song.localLyricFile
+    ? (record.localLyricFileSignature && record.localLyricFileSignature === lyricFileSig)
+    : record.localLyricSource !== 'file';
+  if (canUseLyricCache && (record.localLyricText || record.localLyricLoaded)) {
+    if (Object.prototype.hasOwnProperty.call(record, 'localLyricText')) song.localLyricText = record.localLyricText || '';
+    song.localLyricLoaded = !!record.localLyricLoaded;
+    song.localLyricLightScanned = !!record.localLyricLightScanned;
+    song.localLyricFileName = record.localLyricFileName || song.localLyricFileName || '';
+    song.localLyricTagName = record.localLyricTagName || song.localLyricTagName || '';
+    changed = true;
+  }
+  var coverFileSig = localAssetFileSignature(song.localCoverFile);
+  var canUseCoverCache = song.localCoverFile
+    ? (record.localCoverFileSignature && record.localCoverFileSignature === coverFileSig)
+    : record.localCoverSource !== 'file';
+  if (canUseCoverCache && (record.localCoverDataUrl || record.localCoverLoaded)) {
+    if (record.localCoverDataUrl) song.localCoverDataUrl = record.localCoverDataUrl;
+    song.localCoverLoaded = !!record.localCoverLoaded;
+    song.localCoverLightScanned = !!record.localCoverLightScanned;
+    song.localCoverFileName = record.localCoverFileName || song.localCoverFileName || '';
+    changed = true;
+  }
+  if (changed) {
+    localAssetCacheMemory[song.localKey] = record;
+    syncLocalSongAssetFields(song);
+  }
+  return changed;
+}
+async function hydrateLocalAssetCacheForSongs(songs) {
+  songs = songs || [];
+  var keys = [];
+  var seen = {};
+  songs.forEach(function(song){
+    var key = localAssetCacheKey(song);
+    if (key && !seen[key]) { seen[key] = true; keys.push(key); }
+  });
+  if (!keys.length) return 0;
+  try {
+    var records = await readLocalAssetCacheRecords(keys);
+    var count = 0;
+    songs.forEach(function(song){
+      var record = records[localAssetCacheKey(song)];
+      if (record && applyLocalAssetCacheToSong(song, record)) count++;
+    });
+    return count;
+  } catch (e) {
+    console.warn('[LocalAssetCacheRead]', e);
+    return 0;
+  }
+}
+async function writeLocalAssetCacheForSong(song) {
+  var record = localAssetCacheSnapshot(song);
+  if (!record) return false;
+  localAssetCacheMemory[record.id] = record;
+  try {
+    return await putLocalAssetCacheRecord(record);
+  } catch (e) {
+    console.warn('[LocalAssetCacheWrite]', song && song.name, e);
+    return false;
+  }
+}
+function scheduleLocalAssetCacheWrite(song) {
+  var key = localAssetCacheKey(song);
+  if (!key) return;
+  if (localAssetCacheWriteTimers[key]) clearTimeout(localAssetCacheWriteTimers[key]);
+  localAssetCacheWriteTimers[key] = setTimeout(function(){
+    delete localAssetCacheWriteTimers[key];
+    writeLocalAssetCacheForSong(song);
+  }, 160);
+}
 var colorLabState = { picker: null, id: '', h: 0, s: 1, v: 1, dragging: false };
 var COLOR_LAB_PRESETS = [
   { name: '极黑', color: '#000000' },
@@ -8538,7 +8717,17 @@ function lyricThreeColor(css, fallback, minLum) {
   return c;
 }
 
-var STAGE_LYRIC_MAX_LINES = 1;
+var STAGE_LYRIC_MAX_LINES = 2;
+
+function lyricDisplayLines(text, maxLines) {
+  var lines = String(text || '')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map(function(line){ return line.replace(/[ \t]+/g, ' ').trim(); })
+    .filter(Boolean);
+  if (!lines.length) lines = [''];
+  return lines.slice(0, maxLines || STAGE_LYRIC_MAX_LINES || 2);
+}
 
 function makeLyricMask(text) {
   var canvas = document.createElement('canvas');
@@ -8548,12 +8737,16 @@ function makeLyricMask(text) {
   var maxWidth = W - 190;
   var maxLines = STAGE_LYRIC_MAX_LINES;
   var fontSize = 128;
-  text = String(text || '').replace(/\s+/g, ' ').trim();
-  var lines = [text];
+  var explicitLines = lyricDisplayLines(text, maxLines);
+  var hasExplicitBreak = explicitLines.length > 1;
+  text = explicitLines.join('\n');
+  var lines = explicitLines;
   var widest = 1;
   for (; fontSize >= 42; fontSize -= 4) {
     ctx.font = lyricFontCss(fontSize);
-    lines = maxLines > 1 && lyricMeasureText(ctx, text, fontSize) > maxWidth ? wrapLyricText(ctx, text, maxWidth, maxLines, fontSize) : [text];
+    lines = hasExplicitBreak
+      ? explicitLines
+      : (maxLines > 1 && lyricMeasureText(ctx, explicitLines[0], fontSize) > maxWidth ? wrapLyricText(ctx, explicitLines[0], maxWidth, maxLines, fontSize) : explicitLines);
     widest = 1;
     for (var li = 0; li < lines.length; li++) widest = Math.max(widest, lyricMeasureText(ctx, lines[li], fontSize));
     if (widest <= maxWidth) break;
@@ -8563,7 +8756,7 @@ function makeLyricMask(text) {
   widest = 1;
   for (var mi = 0; mi < lines.length; mi++) widest = Math.max(widest, lyricMeasureText(ctx, lines[mi], fontSize));
   var width = Math.min(maxWidth, widest);
-  var fitScaleX = maxLines <= 1 && widest > maxWidth ? Math.max(0.68, maxWidth / widest) : 1;
+  var fitScaleX = widest > maxWidth ? Math.max(0.68, maxWidth / widest) : 1;
   if (fitScaleX < 1) width = Math.min(maxWidth, widest * fitScaleX);
   var lineHeight = fontSize * (lines.length > 1 ? 1.02 : 1.0) * lyricLineHeightFactor();
   var blockH = fontSize + (lines.length - 1) * lineHeight;
@@ -8668,7 +8861,7 @@ function makeLyricReadabilityTexture(mask) {
 }
 
 function makeLyricGlowTexture(text, fontSize, textWidth, lines, lineHeight, fitScaleX) {
-  text = String(text || '').replace(/\s+/g, ' ').trim();
+  text = lyricDisplayLines(text, STAGE_LYRIC_MAX_LINES).join('\n');
   var drawLines = Array.isArray(lines) && lines.length ? lines : [text];
   var canvas = document.createElement('canvas');
   var measureCanvas = document.createElement('canvas');
@@ -8881,7 +9074,7 @@ function makeLyricShaderMaterial(mask, pal) {
 }
 
 function buildLyricMesh(text) {
-  text = String(text || '').replace(/\s+/g, ' ').trim();
+  text = lyricDisplayLines(text, STAGE_LYRIC_MAX_LINES).join('\n');
   var mask = makeLyricMask(text);
   var pal = stageLyrics.palette;
   var worldW = 6.10;
@@ -9940,7 +10133,7 @@ function updateControlTrackInfo(song) {
   var title = document.getElementById('control-title');
   var artist = document.getElementById('control-artist');
   if (title) title.textContent = song.name || '';
-  if (artist) artist.textContent = song.artist || '';
+  if (artist) artist.textContent = songDisplaySubtitle(song);
 }
 
 function applyCoverCanvas(cv, thumbSrc, opts) {
@@ -12268,6 +12461,19 @@ function syncLocalSongAssetFields(sourceSong) {
       if (sourceSong.localLyricFile && !target.localLyricFile) target.localLyricFile = sourceSong.localLyricFile;
       if (sourceSong.localLyricFileName && !target.localLyricFileName) target.localLyricFileName = sourceSong.localLyricFileName;
       if (sourceSong.localLyricTagName && !target.localLyricTagName) target.localLyricTagName = sourceSong.localLyricTagName;
+      if (sourceSong.localMetadataLoaded) {
+        if (sourceSong.name) target.name = sourceSong.name;
+        if (sourceSong.artist) target.artist = sourceSong.artist;
+        if (sourceSong.album) target.album = sourceSong.album;
+        if (sourceSong.albumArtist) target.albumArtist = sourceSong.albumArtist;
+        if (sourceSong.trackNumber) target.trackNumber = sourceSong.trackNumber;
+        if (sourceSong.year) target.year = sourceSong.year;
+        target.localMetadataLoaded = true;
+      }
+      if (sourceSong.duration && !target.duration) target.duration = sourceSong.duration;
+      if (sourceSong.localFormat && !target.localFormat) target.localFormat = sourceSong.localFormat;
+      if (sourceSong.localFileSize && !target.localFileSize) target.localFileSize = sourceSong.localFileSize;
+      if (sourceSong.localBitrateKbps && !target.localBitrateKbps) target.localBitrateKbps = sourceSong.localBitrateKbps;
     });
   });
 }
@@ -12284,6 +12490,9 @@ async function readLocalBeatCacheForSong(song, mode) {
 function refreshLocalSongAssetUi(song, reason) {
   if (!song) return;
   if (isCurrentLocalQueueSong(song)) {
+    updateControlTrackInfo(song);
+    var thumbArtist = document.getElementById('thumb-artist');
+    if (thumbArtist) thumbArtist.textContent = songDisplaySubtitle(song);
     if (song.localLyricLoaded) {
       applyLocalOriginalLyricsState(song);
       updateCustomLyricControls();
@@ -12303,6 +12512,9 @@ function refreshLocalSongAssetUi(song, reason) {
 }
 function scheduleLocalAssetUiRefresh(song, reason) {
   if (song && isCurrentLocalQueueSong(song)) {
+    updateControlTrackInfo(song);
+    var thumbArtist = document.getElementById('thumb-artist');
+    if (thumbArtist) thumbArtist.textContent = songDisplaySubtitle(song);
     if (song.localLyricLoaded) {
       applyLocalOriginalLyricsState(song);
       updateCustomLyricControls();
@@ -13252,7 +13464,7 @@ function makeShelfManager() {
     }
     if (playQueue.length) {
       return playQueue.map(function(song, idx){
-        return { type:'queue', title: song.name, sub: song.artist || '未知歌手',
+        return { type:'queue', title: song.name, sub: songDisplaySubtitle(song) || '未知',
           cover: songCoverSrc(song, 360), tag: idx === currentIdx ? '正在播放' : ('#' + (idx+1)), queueIndex: idx };
       });
     }
@@ -14369,7 +14581,7 @@ function makeContentListManager() {
     ctx.fillText(ellipsize(ctx, song.name || '', textMax), textX, 44);
     ctx.font = '500 15px Inter, "Microsoft YaHei", Arial';
     ctx.fillStyle = isCenter ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.64)';
-    ctx.fillText(ellipsize(ctx, song.artist || '', textMax), textX, 72);
+    ctx.fillText(ellipsize(ctx, songDisplaySubtitle(song), textMax), textX, 72);
     // center 行右侧显示红心/收藏/播放按钮
     if (isCenter && actionReady) {
       if (!isPodcastRadio) {
@@ -15587,7 +15799,7 @@ function listenSongSnapshot(song) {
     type: song.type || 'song',
     sourceKey: song.type === 'local' ? 'local' : (song.source || song.provider || ''),
     name: song.name || song.title || '未知歌曲',
-    artist: song.artist || '',
+    artist: songArtistText(song),
     cover: songCoverSrc(song, 220) || song.cover || '',
     source: songSourceLabel(song),
     provider: song.type === 'local' ? 'local' : (song.provider || song.source || song.type || ''),
@@ -15756,11 +15968,11 @@ function renderHomeTiles() {
   }
   if (localOnlyHome) {
     localPool.slice(0, Math.max(0, 5 - tiles.length)).forEach(function(song, i){
-      tiles.push({ kind: 'song', index: i, song: song, title: song.name || '本地歌曲', sub: song.artist || song.localPath || '本地文件' });
+      tiles.push({ kind: 'song', index: i, song: song, title: song.name || '本地歌曲', sub: songDisplaySubtitle(song) });
     });
   } else if (!loggedOutHome) {
     homeDiscoverState.songs.slice(0, Math.max(0, 4 - tiles.length)).forEach(function(song, i){
-      tiles.push({ kind: 'song', index: i, song: song, title: song.name || '今日歌曲', sub: song.artist || songSourceLabel(song) });
+      tiles.push({ kind: 'song', index: i, song: song, title: song.name || '今日歌曲', sub: songDisplaySubtitle(song) });
     });
     homeDiscoverState.playlists.slice(0, Math.max(0, 5 - tiles.length)).forEach(function(pl, i){
       tiles.push({ kind: 'playlist', index: i, title: pl.name || '推荐歌单', sub: (pl.trackCount ? pl.trackCount + ' 首' : 'Playlist') + (pl.playCount ? ' · ' + compactHomeCount(pl.playCount) + ' 播放' : ''), cover: pl.cover });
@@ -15773,7 +15985,7 @@ function renderHomeTiles() {
   }
   if (!localOnlyHome && tiles.length < 5) {
     weatherSongs.slice(0, 5 - tiles.length).forEach(function(song, i){
-      tiles.push({ kind: 'weatherSong', index: i, song: song, title: song.name || '天气电台歌曲', sub: song.artist || songSourceLabel(song) });
+      tiles.push({ kind: 'weatherSong', index: i, song: song, title: song.name || '天气电台歌曲', sub: songDisplaySubtitle(song) });
     });
   }
   if (!tiles.length) tiles = fallbackHomeTiles();
@@ -15841,15 +16053,15 @@ function renderHomeDiscover() {
     if (localImportTitle) localImportTitle.textContent = '导入文件夹';
     if (localImportSub) localImportSub.textContent = '选择包含 MP3 / FLAC 的目录';
     if (localDailyTitle) localDailyTitle.textContent = firstLocal ? firstLocal.name : '播放本地音乐';
-    if (localDailySub) localDailySub.textContent = firstLocal ? (firstLocal.artist || firstLocal.localPath || '本地文件') : '导入后从第一首开始播放';
+    if (localDailySub) localDailySub.textContent = firstLocal ? songDisplaySubtitle(firstLocal) : '导入后从第一首开始播放';
     if (localQueueTitle) localQueueTitle.textContent = secondLocal ? secondLocal.name : '本地队列';
-    if (localQueueSub) localQueueSub.textContent = secondLocal ? (secondLocal.artist || secondLocal.localPath || '本地文件') : '查看已导入的歌曲';
+    if (localQueueSub) localQueueSub.textContent = secondLocal ? songDisplaySubtitle(secondLocal) : '查看已导入的歌曲';
     if (localContinueTitle) localContinueTitle.textContent = localSummary.recent ? localSummary.recent.name : '继续听';
     if (localContinueSub) localContinueSub.textContent = localSummary.recent ? (localSummary.recent.artist || localSummary.recent.source || '最近播放') : '最近播放会出现在这里';
     if (localProfileTitle) localProfileTitle.textContent = localSummary.topArtist ? localSummary.topArtist.name : (localSummary.topSong ? localSummary.topSong.name : '听歌画像');
     if (localProfileSub) localProfileSub.textContent = localSummary.topArtist ? ('常听歌手 · ' + localSummary.topArtist.plays + ' 次') : (localSummary.totalPlays ? localSummary.totalPlays + ' 次有效播放' : '播放几首后生成偏好');
     if (localSearchTitle) localSearchTitle.textContent = thirdLocal ? thirdLocal.name : '搜索本地库';
-    if (localSearchSub) localSearchSub.textContent = thirdLocal ? (thirdLocal.artist || thirdLocal.localPath || '本地文件') : '按歌名、歌手或文件名查找';
+    if (localSearchSub) localSearchSub.textContent = thirdLocal ? songDisplaySubtitle(thirdLocal) : '按歌名、歌手或文件名查找';
     setHomeArt('home-weather-art', firstLocal && songCoverSrc(firstLocal, 280), 280);
     setHomeArt('home-daily-art', firstLocal && songCoverSrc(firstLocal, 280), 280);
     setHomeArt('home-private-art', secondLocal && songCoverSrc(secondLocal, 280) || firstLocal && songCoverSrc(firstLocal, 280), 280);
@@ -15919,11 +16131,11 @@ function renderHomeDiscover() {
     setHomeArt('home-library-art', '', 280);
   } else {
     if (dailyTitle) dailyTitle.textContent = daily ? daily.name : '每日推荐';
-    if (dailySub) dailySub.textContent = daily ? ((daily.artist || songSourceLabel(daily) || '今日歌曲') + ' · 点击播放今日队列') : '同步你的今日歌曲';
+    if (dailySub) dailySub.textContent = daily ? ((songDisplaySubtitle(daily) || '今日歌曲') + ' · 点击播放今日队列') : '同步你的今日歌曲';
     if (privateTitle) privateTitle.textContent = cardSongB ? cardSongB.name : '私人雷达';
-    if (privateSub) privateSub.textContent = cardSongB ? (cardSongB.artist || songSourceLabel(cardSongB) || '推荐歌曲') : (homeDiscoverState.songs.length + ' 首 · 根据今日推荐与常听偏好');
+    if (privateSub) privateSub.textContent = cardSongB ? (songDisplaySubtitle(cardSongB) || '推荐歌曲') : (homeDiscoverState.songs.length + ' 首 · 根据今日推荐与常听偏好');
     if (libTitle) libTitle.textContent = cardSongC ? cardSongC.name : (summary.topArtist ? summary.topArtist.name : '更多歌曲');
-    if (libSub) libSub.textContent = cardSongC ? (cardSongC.artist || songSourceLabel(cardSongC) || '推荐歌曲') : (summary.topArtist ? ('歌手偏好 · ' + summary.topArtist.plays + ' 次') : '播放几首后生成你的偏好');
+    if (libSub) libSub.textContent = cardSongC ? (songDisplaySubtitle(cardSongC) || '推荐歌曲') : (summary.topArtist ? ('歌手偏好 · ' + summary.topArtist.plays + ' 次') : '播放几首后生成你的偏好');
     setHomeArt('home-weather-art', (userPlaylists[0] && userPlaylists[0].cover) || (playlistItem && playlistItem.cover) || daily && daily.cover, 280);
     setHomeArt('home-daily-art', daily && daily.cover, 280);
     setHomeArt('home-private-art', cardSongB && cardSongB.cover || daily && daily.cover || summary.recent && summary.recent.cover || playlistItem && playlistItem.cover, 280);
@@ -16770,12 +16982,85 @@ function songSourceLabel(song) {
   if (song.type === 'podcast' || song.source === 'podcast') return '网易云播客';
   return '网易云音乐';
 }
+function isLocalPlaceholderArtist(text) {
+  return /^(本地文件|本地上传|本地音乐|未知歌手)$/i.test(String(text || '').trim());
+}
+function songArtistText(song) {
+  var artist = String(song && (song.artist || song.albumArtist) || '').trim();
+  if (song && song.type === 'local' && isLocalPlaceholderArtist(artist)) return '';
+  return artist;
+}
+function localAudioFormatLabel(song) {
+  if (!song || song.type !== 'local') return '';
+  var file = song.localFile || null;
+  var path = String(song.localPath || song.localFilePathAbsolute || localFilePath(file) || song.name || '');
+  var m = path.match(/\.([a-z0-9]+)(?:$|[?#])/i);
+  var ext = m ? m[1].toLowerCase() : '';
+  if (ext === 'flac') return 'FLAC';
+  if (ext === 'mp3') return 'MP3';
+  if (ext === 'wav') return 'WAV';
+  if (ext === 'm4a') return 'M4A';
+  if (ext === 'ogg') return 'OGG';
+  return ext ? ext.toUpperCase() : 'LOCAL';
+}
+function localAudioFileBytes(song) {
+  if (!song) return 0;
+  return Number(song.localFileSize || song.size || (song.localFile && localFileSize(song.localFile)) || 0) || 0;
+}
+function localAudioDurationSeconds(song) {
+  if (!song) return 0;
+  var sec = Number(song.duration) || 0;
+  if (sec > 10000) sec = sec / 1000;
+  if (!sec) sec = normalizePlaybackDurationSeconds(song.durationMs || song.dt || 0);
+  return sec > 0 ? sec : 0;
+}
+function estimateLocalAudioBitrateKbps(song) {
+  if (!song || song.type !== 'local') return 0;
+  var cached = Number(song.localBitrateKbps) || 0;
+  if (cached > 0) return cached;
+  var bytes = localAudioFileBytes(song);
+  var duration = localAudioDurationSeconds(song);
+  if (!bytes || !duration) return 0;
+  return Math.max(1, Math.round(bytes * 8 / duration / 1000));
+}
+function updateLocalAudioQualityInfo(song) {
+  if (!song || song.type !== 'local') return;
+  song.localFormat = localAudioFormatLabel(song);
+  song.localFileSize = localAudioFileBytes(song);
+  var kbps = estimateLocalAudioBitrateKbps(song);
+  if (kbps) song.localBitrateKbps = kbps;
+}
+function localAudioQualityText(song) {
+  if (!song || song.type !== 'local') return '';
+  updateLocalAudioQualityInfo(song);
+  var format = song.localFormat || localAudioFormatLabel(song);
+  var kbps = Number(song.localBitrateKbps) || estimateLocalAudioBitrateKbps(song);
+  var bits = [];
+  if (format) bits.push(format);
+  if (kbps) bits.push(Math.round(kbps) + ' kbps');
+  else if (format === 'FLAC' || format === 'WAV') bits.push('无损');
+  return bits.join(' · ');
+}
+function songDisplaySubtitle(song) {
+  if (!song) return '';
+  var artist = songArtistText(song);
+  var album = String(song.album || song.radioName || '').trim();
+  var bits = [];
+  if (artist) bits.push(artist);
+  if (album && bits.indexOf(album) < 0) bits.push(album);
+  if (song.type === 'local') {
+    var quality = localAudioQualityText(song);
+    if (quality) bits.push(quality);
+    return bits.join(' · ');
+  }
+  return bits.join(' · ') || songSourceLabel(song);
+}
 function detailRow(label, value) {
   value = value == null || value === '' ? '未知' : value;
   return '<div class="detail-k">' + escHtml(label) + '</div><div class="detail-v">' + escHtml(String(value)) + '</div>';
 }
 function currentArtistNames(song) {
-  var text = String((song && song.artist) || '').trim();
+  var text = songArtistText(song);
   if (!text) return [];
   return text.split(/\s*\/\s*|\s*,\s*|、/).map(function(s){ return s.trim(); }).filter(Boolean);
 }
@@ -16904,7 +17189,7 @@ function openTrackDetailModal(type, songOverride) {
     var artistDetailUrl = localArtistOnly ? '' : (artistId
       ? ('/api/artist/detail?id=' + encodeURIComponent(artistId) + '&limit=36')
       : (qqArtistMid ? ('/api/qq/artist/detail?mid=' + encodeURIComponent(qqArtistMid) + '&limit=36') : ''));
-    var artistName = artists.join(' / ') || song.artist || '未知歌手';
+    var artistName = artists.join(' / ') || songArtistText(song) || '未知歌手';
     var artistNamesForMatch = artists.length ? artists : (song.artist ? [song.artist] : []);
     var artistInitial = artistName && artistName !== '未知歌手' ? artistName.slice(0, 1) : '歌';
     var artistCoverHtml = '<div id="artist-detail-cover" class="detail-cover detail-artist-avatar">' + escHtml(artistInitial) + '</div>';
@@ -16966,27 +17251,33 @@ function openTrackDetailModal(type, songOverride) {
     var detailCanLoadComments = !detailIsLocal && (isCloudSong(song) || detailIsQQ);
     var detailCommentTitle = detailIsLocal ? '本地信息' : (detailIsQQ ? 'QQ 音乐评论' : '网易云评论');
     var detailEmptyText = detailIsLocal ? '本地歌曲不加载在线评论。' : (detailIsQQ ? '当前 QQ 歌曲暂无评论' : '本地文件暂无网易云评论');
+    var detailArtist = songArtistText(song);
+    var detailAlbum = String(song.album || (song.type === 'podcast' ? (song.radioName || 'Podcast') : '') || '').trim();
+    var detailQuality = song.type === 'local' ? localAudioQualityText(song) : '';
+    var detailSubtitle = songDisplaySubtitle(song) || (detailIsLocal ? detailQuality : '未知歌手');
+    var detailPrimaryChip = detailQuality || songSourceLabel(song);
     var localDetailRows = song.type === 'local'
-      ? detailRow('文件路径', song.localPath || song.localFile && song.localFile.name || '未知') +
+      ? detailRow('音质', detailQuality || '未知') +
+        detailRow('文件路径', song.localPath || song.localFile && song.localFile.name || '未知') +
         detailRow('歌词文件', song.localLyricFileName || '未匹配') +
         detailRow('封面文件', song.localCoverFileName || (song.localCoverDataUrl ? '内嵌封面' : '未匹配'))
       : '';
     body.innerHTML =
       '<div class="detail-hero">' + coverHtml +
         '<div style="min-width:0;flex:1"><div class="detail-title">' + escHtml(title) + '</div>' +
-        '<div class="detail-sub">' + escHtml(song.artist || (song.type === 'local' ? '本地文件' : '未知歌手')) + '</div></div>' +
+        '<div class="detail-sub">' + escHtml(detailSubtitle) + '</div></div>' +
       '</div>' +
       '<div class="detail-grid">' +
         detailRow('歌曲名', title) +
-        detailRow('歌手', song.artist || '未知歌手') +
-        detailRow('专辑', song.album || (song.type === 'podcast' ? (song.radioName || 'Podcast') : '未知')) +
+        detailRow('歌手', detailArtist || '未知') +
+        detailRow('专辑', detailAlbum || '未知') +
         detailRow('时长', songDurationLabel(song)) +
         detailRow('来源', songSourceLabel(song)) +
-        detailRow('歌词源', lyricSourceMode === 'custom' ? '自定义歌词' : (lyricsTimingSource === 'fallback' ? '占位歌词' : '原词')) +
+        detailRow('歌词源', currentLyricSourceLabel()) +
         localDetailRows +
       '</div>' +
       '<div class="detail-chip-row">' +
-        '<span class="detail-chip">' + escHtml(songSourceLabel(song)) + '</span>' +
+        '<span class="detail-chip">' + escHtml(detailPrimaryChip) + '</span>' +
         (isSongLiked(song) ? '<span class="detail-chip">红心喜欢</span>' : '') +
         (getCustomCoverForSong(song) ? '<span class="detail-chip">自定义封面</span>' : '') +
         (hasCustomLyricForSong(song) ? '<span class="detail-chip">自定义歌词</span>' : '') +
@@ -17234,15 +17525,16 @@ function applyCustomLyricState(song, silent) {
 function preferredLyricSourceForSong(song) {
   var key = songCustomLyricKey(song);
   var hasCustom = hasCustomLyricForSong(song);
-  if (!hasCustom) return 'original';
   var pref = key ? customLyricPrefs[key] : '';
+  if (!hasCustom) return 'original';
   if (pref === 'custom') return 'custom';
   if (pref === 'original') return 'original';
   return originalLyricsState.timingSource === 'fallback' ? 'custom' : 'original';
 }
 function applyPreferredLyricsForCurrent(silent) {
   var song = currentLyricSong();
-  if (preferredLyricSourceForSong(song) === 'custom' && applyCustomLyricState(song, true)) return;
+  var pref = preferredLyricSourceForSong(song);
+  if (pref === 'custom' && applyCustomLyricState(song, true)) return;
   applyOriginalLyricsState();
   if (!silent) updateCustomLyricControls();
 }
@@ -17273,7 +17565,7 @@ function updateCustomLyricControls() {
   var originalBtn = document.getElementById('lyric-source-original');
   var customBtn = document.getElementById('lyric-source-custom');
   if (originalBtn) {
-    originalBtn.classList.toggle('active', lyricSourceMode !== 'custom');
+    originalBtn.classList.toggle('active', lyricSourceMode === 'original');
     originalBtn.title = '使用网易云或本地解析歌词';
   }
   if (customBtn) {
@@ -17281,6 +17573,10 @@ function updateCustomLyricControls() {
     customBtn.classList.toggle('has-custom', hasCustom);
     customBtn.title = hasCustom ? '打开并编辑自定义歌词' : '新增自定义歌词';
   }
+}
+function currentLyricSourceLabel() {
+  if (lyricSourceMode === 'custom') return '自定义歌词';
+  return lyricsTimingSource === 'fallback' ? '占位歌词' : '原词';
 }
 function setCustomLyricStatus(text, tone) {
   var el = document.getElementById('custom-lyric-status');
@@ -17301,7 +17597,7 @@ function openCustomLyricModal() {
   var sub = document.getElementById('custom-lyric-sub');
   var input = document.getElementById('custom-lyric-input');
   if (title) title.textContent = song.name || '当前歌曲';
-  if (sub) sub.textContent = (song.artist || (song.type === 'podcast' ? 'Podcast' : '')) + (entry ? ' · 已保存自定义歌词' : ' · 可粘贴 LRC 或逐行输入');
+  if (sub) sub.textContent = (songDisplaySubtitle(song) || (song.type === 'podcast' ? 'Podcast' : '')) + (entry ? ' · 已保存自定义歌词' : ' · 可粘贴 LRC 或逐行输入');
   if (input) input.value = entry ? (entry.text || '') : '';
   setCustomLyricStatus(entry ? '已读取本地自定义歌词' : '提示：带 [00:12.00] 时间轴会更精准；纯文本会自动铺开', entry ? 'good' : '');
   openGsapModal(document.getElementById('custom-lyric-modal'));
@@ -17514,7 +17810,7 @@ function renderCollectModal() {
   var song = collectTargetSong || {};
   var cover = songCoverSrc(song, 80);
   current.innerHTML = (cover ? '<img src="' + cover + '" alt="">' : '<div class="cover-placeholder"></div>') +
-    '<div style="min-width:0"><div class="collect-title">' + escHtml(song.name || '当前歌曲') + '</div><div class="collect-sub">' + escHtml(song.artist || '') + '</div></div>';
+    '<div style="min-width:0"><div class="collect-title">' + escHtml(song.name || '当前歌曲') + '</div><div class="collect-sub">' + escHtml(songDisplaySubtitle(song)) + '</div></div>';
   if (!loginStatus.loggedIn) {
     list.innerHTML = '<div class="collect-empty">登录后显示你的歌单</div>';
     return;
@@ -17971,17 +18267,25 @@ function songSourceTagHtml(song) {
 }
 function searchResultMetaText(song) {
   var bits = [];
-  if (song && song.type === 'local' && song.localPath) bits.push(song.localPath);
-  if (song.artist) bits.push(song.artist);
+  var artist = songArtistText(song);
+  if (artist) bits.push(artist);
   if (song.album) bits.push(song.album);
+  if (song && song.type === 'local') {
+    var quality = localAudioQualityText(song);
+    if (quality) bits.push(quality);
+  }
   if (songProviderKey(song) === 'qq' && !song.playable) bits.push('QQ 播放需会话/授权');
   return bits.join('  ·  ') || songSourceLabel(song);
 }
 function searchResultMetaHtml(song, index) {
   song = song || {};
-  var artist = String(song.artist || '').trim();
+  var artist = songArtistText(song);
   var bits = [];
   if (song.album) bits.push(song.album);
+  if (song.type === 'local') {
+    var quality = localAudioQualityText(song);
+    if (quality) bits.push(quality);
+  }
   if (songProviderKey(song) === 'qq' && !song.playable) bits.push('QQ 播放需会话/授权');
   var tail = bits.length ? (' · ' + escHtml(bits.join('  ·  '))) : '';
   if (!artist) return escHtml(searchResultMetaText(song));
@@ -18009,6 +18313,7 @@ function localSongSearchText(song) {
   return [
     song && song.name,
     song && song.artist,
+    song && song.albumArtist,
     song && song.album,
     song && song.localPath,
     song && song.localLyricFileName,
@@ -18959,6 +19264,7 @@ function ensureLocalLyricsForSong(song, opts) {
   }
   if (!song.localLyricFile && !canReadEmbeddedFlacLyrics(song)) {
     song.localLyricLoaded = true;
+    scheduleLocalAssetCacheWrite(song);
     return Promise.resolve(false);
   }
   song.localLyricLoading = true;
@@ -18981,6 +19287,7 @@ function ensureLocalLyricsForSong(song, opts) {
       song.localLyricLoaded = true;
     }
     syncLocalSongAssetFields(song);
+    if (song.localLyricLoaded || text) scheduleLocalAssetCacheWrite(song);
     if (text || !opts.background || song.localLyricLoaded) maybeApplyLocalLyricsForSong(song, opts);
     scheduleLocalAssetUiRefresh(song, 'local-lyric-prefetch');
     return !!text;
@@ -19029,8 +19336,15 @@ async function playLocalQueueItem(song, idx, opts, token, firstVisualPlay, bmKey
   audio.onloadedmetadata = function(){
     if (token !== trackSwitchToken || playQueue[idx] !== song) return;
     song.duration = audio && isFinite(audio.duration) ? audio.duration : 0;
+    updateLocalAudioQualityInfo(song);
+    syncLocalSongAssetFields(song);
+    scheduleLocalAssetCacheWrite(song);
+    updateControlTrackInfo(song);
+    var thumbArtist = document.getElementById('thumb-artist');
+    if (thumbArtist) thumbArtist.textContent = songDisplaySubtitle(song);
     applyLocalOriginalLyricsState(song);
     safeRenderQueuePanel('local-metadata', { scrollCurrent: miniQueueOpen });
+    if (LOCAL_ONLY_MODE && emptyHomeActive) renderHomeDiscover();
   };
   scheduleAudioResumePosition(audio, opts.resumeAt, token);
   audio.load();
@@ -19092,6 +19406,10 @@ async function playQueueAt(idx, opts) {
   markPlayPhase('track-setup');
   var song = safePlaybackStep('hydrate-song', function(){ return hydrateCustomCover(playQueue[idx]); }) || playQueue[idx];
   playQueue[idx] = song;
+  if (song && song.type === 'local') {
+    markPlayPhase('local-metadata');
+    await ensureLocalMetadataForSong(song, { background:true });
+  }
   var playbackContext = opts.context || (song && song.radioContext) || null;
   activeRadioContext = playbackContext || null;
   safeRenderQueuePanel('play-queue-at-switch', { scrollCurrent: miniQueueOpen });
@@ -19110,7 +19428,7 @@ async function playQueueAt(idx, opts) {
   safePlaybackStep('track-ui', function(){
     document.getElementById('hint').classList.add('hidden');
     document.getElementById('thumb-title').textContent = song.name;
-    document.getElementById('thumb-artist').textContent = song.artist;
+    document.getElementById('thumb-artist').textContent = songDisplaySubtitle(song);
     updateControlTrackInfo(song);
     document.getElementById('thumb-wrap').classList.add('visible');
   });
@@ -19768,15 +20086,43 @@ function finalizeLyricLineDurations(lines) {
   return lines;
 }
 function parseLyricText(text) {
-  var lines = [], reg = /\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?\]/g;
-  text.split(/\r?\n/).forEach(function(line){
+  var entries = [], reg = /\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?\]/g;
+  String(text || '').split(/\r?\n/).forEach(function(line){
     var times = [], m;
     reg.lastIndex = 0;
     while ((m = reg.exec(line))) times.push(lyricTagTimeToSeconds(m[1], m[2], m[3]));
     if (!times.length) return;
     var txt = line.replace(reg, '').trim();
     if (!txt) return;
-    times.forEach(function(t){ lines.push({ t: t, text: txt, source:'lrc' }); });
+    times.forEach(function(t){ entries.push({ t: t, text: txt }); });
+  });
+  var buckets = {}, ordered = [];
+  entries.forEach(function(entry){
+    var key = String(Math.round((Number(entry.t) || 0) * 1000));
+    var bucket = buckets[key];
+    if (!bucket) {
+      bucket = buckets[key] = { t: entry.t, texts: [], seen: Object.create(null) };
+      ordered.push(bucket);
+    }
+    String(entry.text || '').split(/\n+/).forEach(function(row){
+      row = row.replace(/[ \t]+/g, ' ').trim();
+      if (!row) return;
+      var norm = row.toLowerCase();
+      if (bucket.seen[norm]) return;
+      bucket.seen[norm] = true;
+      if (bucket.texts.length < 2) bucket.texts.push(row);
+    });
+  });
+  var lines = ordered.map(function(bucket){
+    var text = bucket.texts.join('\n');
+    return {
+      t: bucket.t,
+      text: text,
+      source: bucket.texts.length > 1 ? 'lrc-bilingual' : 'lrc',
+      charCount: Math.max(1, text.replace(/\n/g, '').length)
+    };
+  }).filter(function(line){
+    return line.text && !isNoLyricText(line.text);
   });
   return finalizeLyricLineDurations(lines);
 }
@@ -20056,9 +20402,10 @@ function renderMiniQueuePanel(opts) {
   $list.innerHTML = playQueue.map(function(song, i){
     var thumb = songCoverSrc(song, 60);
     var imgTag = thumb ? '<img src="' + thumb + '" alt="" loading="lazy" decoding="async" onerror="this.style.opacity=0.2">' : '<div class="mini-queue-cover"></div>';
+    var sub = songDisplaySubtitle(song);
     return '<div class="mini-queue-item' + (i === currentIdx ? ' now' : '') + '" onclick="playQueueAt(' + i + ')">' +
       imgTag +
-      '<div class="mini-queue-info"><div class="mini-queue-name">' + escHtml(song.name) + '</div><div class="mini-queue-sub">' + escHtml(song.artist || '') + '</div></div>' +
+      '<div class="mini-queue-info"><div class="mini-queue-name">' + escHtml(song.name) + '</div><div class="mini-queue-sub">' + escHtml(sub) + '</div></div>' +
       '<button class="mini-queue-remove mini-queue-next" onclick="event.stopPropagation();queueIndexNext(' + i + ')" title="下一首播放">下</button>' +
       '<button class="mini-queue-remove" onclick="event.stopPropagation();removeFromQueue(' + i + ')" title="移除">×</button>' +
     '</div>';
@@ -20090,6 +20437,11 @@ function renderQueuePanel(opts) {
   $ql.innerHTML = playQueue.map(function(song, i){
     var thumb = songCoverSrc(song, 60);
     var imgTag = thumb ? '<img src="' + thumb + '" alt="" loading="lazy" decoding="async" onerror="this.style.opacity=0.2">' : '<div style="width:38px;height:38px;border-radius:6px;background:rgba(255,255,255,.06);flex-shrink:0"></div>';
+    var artist = songArtistText(song);
+    var sub = songDisplaySubtitle(song);
+    var subHtml = song.type === 'local'
+      ? escHtml(sub)
+      : '<button class="queue-artist-link" type="button" onclick="event.stopPropagation();openQueueArtist(' + i + ')">' + escHtml(artist || '未知歌手') + '</button>' + (song.album ? (' · ' + escHtml(song.album)) : '');
     var actionsHtml = LOCAL_ONLY_MODE
       ? '<div class="qi-act">' +
         '<button class="queue-next" onclick="event.stopPropagation();queueIndexNext(' + i + ')" title="下一首播放">下</button>' +
@@ -20103,7 +20455,7 @@ function renderQueuePanel(opts) {
         '</div>';
     return '<div class="queue-item' + (i === currentIdx ? ' now' : '') + '" onclick="playQueueAt(' + i + ')">' +
       imgTag +
-      '<div class="qi-info"><div class="qi-name">' + escHtml(song.name) + '</div><div class="qi-sub"><button class="queue-artist-link" type="button" onclick="event.stopPropagation();openQueueArtist(' + i + ')">' + escHtml(song.artist || '未知歌手') + '</button></div></div>' +
+      '<div class="qi-info"><div class="qi-name">' + escHtml(song.name) + '</div><div class="qi-sub">' + subHtml + '</div></div>' +
       actionsHtml +
     '</div>';
   }).join('');
@@ -20797,7 +21149,7 @@ function findLocalCoverFile(audioFile, maps) {
 }
 function localTrackInfoFromFile(file) {
   var title = localFileBaseName(file) || '本地音乐';
-  var artist = '本地文件';
+  var artist = '';
   var match = title.match(/^\s*(.+?)\s+-\s+(.+?)\s*$/);
   if (match) {
     artist = match[1].trim() || artist;
@@ -20821,6 +21173,8 @@ function makeLocalSongFromFile(file, lyricFile, coverFile) {
     localKey: localSongKeyFromFile(file),
     localPath: localFilePath(file),
     localFilePathAbsolute: localFullPath(file),
+    localFileSize: localFileSize(file),
+    localFormat: localAudioFormatLabel({ type:'local', localFile:file, localPath:localFilePath(file), name:info.title }),
     localFileUrl: localFileUrlFromEntry(file),
     localFile: file,
     localUrl: '',
@@ -20835,6 +21189,7 @@ function makeLocalSongFromFile(file, lyricFile, coverFile) {
     localCoverDataUrl: '',
     localCoverLoaded: false,
     localCoverLightScanned: false,
+    localMetadataLoaded: false,
     duration: 0
   });
 }
@@ -20941,6 +21296,151 @@ function utf8FromBytes(bytes, start, len) {
     for (var i = 0; i < len && start + i < bytes.length; i++) out += String.fromCharCode(bytes[start + i]);
     return out;
   }
+}
+function decodeBytesWithEncoding(bytes, encoding) {
+  try {
+    return new TextDecoder(encoding).decode(bytes).replace(/^\uFEFF/, '');
+  } catch (e) {
+    var out = '';
+    for (var i = 0; i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
+    return out;
+  }
+}
+function decodeId3TextFrame(bytes, start, end) {
+  if (start >= end) return '';
+  var enc = bytes[start] || 0;
+  var body = bytes.subarray(start + 1, end);
+  if (enc === 1) {
+    if (body.length >= 2 && body[0] === 0xfe && body[1] === 0xff) return decodeBytesWithEncoding(body.subarray(2), 'utf-16be');
+    if (body.length >= 2 && body[0] === 0xff && body[1] === 0xfe) return decodeBytesWithEncoding(body.subarray(2), 'utf-16le');
+    return decodeBytesWithEncoding(body, 'utf-16le');
+  }
+  if (enc === 2) return decodeBytesWithEncoding(body, 'utf-16be');
+  if (enc === 3) return decodeBytesWithEncoding(body, 'utf-8');
+  return decodeBytesWithEncoding(body, 'latin1');
+}
+function normalizeLocalMetadataValue(value) {
+  return String(value || '')
+    .replace(/\u0000+/g, ' / ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+\/\s+/g, ' / ')
+    .trim();
+}
+function putLocalMetadataTag(tags, key, value) {
+  value = normalizeLocalMetadataValue(value);
+  if (!value) return;
+  if (key === 'title' && !tags.title) tags.title = value;
+  else if (key === 'artist' && !tags.artist) tags.artist = value;
+  else if (key === 'album' && !tags.album) tags.album = value;
+  else if (key === 'albumArtist' && !tags.albumArtist) tags.albumArtist = value;
+  else if (key === 'track' && !tags.track) tags.track = value;
+  else if (key === 'year' && !tags.year) tags.year = value;
+}
+function id3TextFrameKey(id) {
+  return {
+    TIT2: 'title', TT2: 'title',
+    TPE1: 'artist', TP1: 'artist',
+    TALB: 'album', TAL: 'album',
+    TPE2: 'albumArtist', TP2: 'albumArtist',
+    TRCK: 'track', TRK: 'track',
+    TYER: 'year', TDRC: 'year', TYE: 'year'
+  }[id] || '';
+}
+async function extractMp3LocalMetadata(file) {
+  var fileSize = localFileSize(file);
+  var first = await readLocalFileBytes(file, 0, Math.min(fileSize || 0, 256 * 1024) || 256 * 1024);
+  if (asciiFromBytes(first, 0, 3) !== 'ID3' || first.length < 10) return {};
+  var version = first[3] || 3;
+  var tagSize = synchsafeInt(first, 6);
+  if (!tagSize || tagSize > 48 * 1024 * 1024) return {};
+  var total = Math.min((fileSize || tagSize + 10), tagSize + 10);
+  var bytes = first.length >= total ? first : await readLocalFileBytes(file, 0, total);
+  var pos = 10;
+  var end = Math.min(bytes.length, tagSize + 10);
+  var tags = {};
+  if (version >= 3 && (bytes[5] & 0x40) && pos + 4 <= end) {
+    var extSize = version === 4 ? synchsafeInt(bytes, pos) : uint32BE(bytes, pos);
+    if (extSize > 0 && extSize < end - pos) pos += version === 4 ? extSize : extSize + 4;
+  }
+  while (version >= 3 && pos + 10 <= end) {
+    var id = asciiFromBytes(bytes, pos, 4);
+    var size = version === 4 ? synchsafeInt(bytes, pos + 4) : uint32BE(bytes, pos + 4);
+    if (!/^[A-Z0-9]{4}$/.test(id) || size <= 0) break;
+    var frameStart = pos + 10;
+    var frameEnd = Math.min(end, frameStart + size);
+    var key = id3TextFrameKey(id);
+    if (key) putLocalMetadataTag(tags, key, decodeId3TextFrame(bytes, frameStart, frameEnd));
+    pos = frameEnd;
+  }
+  pos = 10;
+  while (version === 2 && pos + 6 <= end) {
+    var shortId = asciiFromBytes(bytes, pos, 3);
+    var shortSize = uint24BE(bytes, pos + 3);
+    if (!/^[A-Z0-9]{3}$/.test(shortId) || shortSize <= 0) break;
+    var shortStart = pos + 6;
+    var shortEnd = Math.min(end, shortStart + shortSize);
+    var shortKey = id3TextFrameKey(shortId);
+    if (shortKey) putLocalMetadataTag(tags, shortKey, decodeId3TextFrame(bytes, shortStart, shortEnd));
+    pos = shortEnd;
+  }
+  return tags;
+}
+function vorbisCommentKey(key) {
+  key = String(key || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (key === 'TITLE') return 'title';
+  if (key === 'ARTIST' || key === 'PERFORMER') return 'artist';
+  if (key === 'ALBUM') return 'album';
+  if (key === 'ALBUMARTIST' || key === 'ALBUMARTISTSORT') return 'albumArtist';
+  if (key === 'TRACKNUMBER' || key === 'TRACK') return 'track';
+  if (key === 'DATE' || key === 'YEAR') return 'year';
+  return '';
+}
+async function extractFlacLocalMetadata(file, opts) {
+  opts = opts || {};
+  var maxScan = opts.light ? LOCAL_ASSET_LIGHT_SCAN_BYTES : 32 * 1024 * 1024;
+  var limit = Math.min(localFileSize(file) || 0, maxScan);
+  var bytes = await readLocalFileBytes(file, 0, limit || maxScan);
+  var pos = findFlacMetadataStart(bytes);
+  if (pos < 0) return {};
+  var tags = {};
+  while (pos + 4 <= bytes.length) {
+    var header = bytes[pos];
+    var last = !!(header & 0x80);
+    var type = header & 0x7f;
+    var len = uint24BE(bytes, pos + 1);
+    var start = pos + 4;
+    var end = start + len;
+    if (end > bytes.length) break;
+    if (type === 4 && len > 8) {
+      var p = start;
+      var vendorLen = uint32LE(bytes, p); p += 4 + vendorLen;
+      if (p + 4 <= end) {
+        var count = Math.min(uint32LE(bytes, p), 10000); p += 4;
+        for (var i = 0; i < count && p + 4 <= end; i++) {
+          var commentLen = uint32LE(bytes, p); p += 4;
+          if (!commentLen || p + commentLen > end) { p = end; break; }
+          var comment = utf8FromBytes(bytes, p, commentLen); p += commentLen;
+          var eq = comment.indexOf('=');
+          if (eq <= 0) continue;
+          putLocalMetadataTag(tags, vorbisCommentKey(comment.slice(0, eq)), comment.slice(eq + 1));
+        }
+      }
+    }
+    pos = end;
+    if (last) break;
+  }
+  return tags;
+}
+async function extractLocalMetadataTags(file, opts) {
+  if (!file) return {};
+  var name = String(file.name || '').toLowerCase();
+  try {
+    if (/\.mp3$/i.test(name)) return await extractMp3LocalMetadata(file);
+    if (/\.flac$/i.test(name)) return await extractFlacLocalMetadata(file, opts);
+  } catch (e) {
+    console.warn('[LocalMetadata]', file && file.name, e);
+  }
+  return {};
 }
 function findFlacMetadataStart(bytes) {
   var pos = asciiFromBytes(bytes, 0, 4) === 'fLaC' ? 4 : -1;
@@ -21114,6 +21614,54 @@ async function extractEmbeddedCoverDataUrl(file, opts) {
   }
   return '';
 }
+function applyLocalMetadataTags(song, tags) {
+  if (!song || !tags) return false;
+  var changed = false;
+  if (tags.title && song.name !== tags.title) { song.name = tags.title; changed = true; }
+  if (tags.artist && song.artist !== tags.artist) { song.artist = tags.artist; changed = true; }
+  if (tags.album && song.album !== tags.album) { song.album = tags.album; changed = true; }
+  if (tags.albumArtist && song.albumArtist !== tags.albumArtist) { song.albumArtist = tags.albumArtist; changed = true; }
+  if (tags.track && song.trackNumber !== tags.track) { song.trackNumber = tags.track; changed = true; }
+  if (tags.year && song.year !== tags.year) { song.year = tags.year; changed = true; }
+  updateLocalAudioQualityInfo(song);
+  return changed;
+}
+function refreshLocalMetadataUi(song, reason) {
+  if (song && isCurrentLocalQueueSong(song)) {
+    updateControlTrackInfo(song);
+    var title = document.getElementById('thumb-title');
+    var artist = document.getElementById('thumb-artist');
+    if (title) title.textContent = song.name || '';
+    if (artist) artist.textContent = songDisplaySubtitle(song);
+  }
+  safeRenderQueuePanel(reason || 'local-metadata-ready', { scrollCurrent: miniQueueOpen });
+  if (LOCAL_ONLY_MODE && $results && $results.classList.contains('show') && $input) renderLocalLibraryResults($input.value || '');
+  if (LOCAL_ONLY_MODE && emptyHomeActive) renderHomeDiscover();
+  scheduleShelfRebuild(reason || 'local-metadata-ready', true);
+}
+function ensureLocalMetadataForSong(song, opts) {
+  opts = opts || {};
+  if (!song || song.type !== 'local') return Promise.resolve(false);
+  updateLocalAudioQualityInfo(song);
+  if (song.localMetadataLoaded) return Promise.resolve(false);
+  if (song.localMetadataPromise) return song.localMetadataPromise;
+  song.localMetadataPromise = extractLocalMetadataTags(song.localFile, { light: !!opts.background }).then(function(tags){
+    var changed = applyLocalMetadataTags(song, tags || {});
+    song.localMetadataLoaded = true;
+    syncLocalSongAssetFields(song);
+    scheduleLocalAssetCacheWrite(song);
+    if (changed || opts.applyCurrent) refreshLocalMetadataUi(song, 'local-metadata-ready');
+    return changed;
+  }).catch(function(e){
+    console.warn('[LocalMetadata]', song && song.name, e);
+    song.localMetadataLoaded = true;
+    scheduleLocalAssetCacheWrite(song);
+    return false;
+  }).finally(function(){
+    song.localMetadataPromise = null;
+  });
+  return song.localMetadataPromise;
+}
 function maybeApplyLocalCoverForSong(song, opts) {
   opts = opts || {};
   if (!opts.applyCurrent) return;
@@ -21154,6 +21702,7 @@ function ensureLocalCoverForSong(song, opts) {
         song.localCoverLoaded = true;
       }
       syncLocalSongAssetFields(song);
+      if (song.localCoverLoaded) scheduleLocalAssetCacheWrite(song);
       return false;
     }
     song.localCoverDataUrl = dataUrl;
@@ -21161,6 +21710,7 @@ function ensureLocalCoverForSong(song, opts) {
     song.localCoverLightScanned = false;
     if (song.type === 'local' && song.customCover && song.customCover === song.localCoverObjectUrl) song.customCover = '';
     syncLocalSongAssetFields(song);
+    scheduleLocalAssetCacheWrite(song);
     maybeApplyLocalCoverForSong(song, opts);
     scheduleLocalAssetUiRefresh(song, 'local-cover-prefetch');
     return true;
@@ -21169,6 +21719,7 @@ function ensureLocalCoverForSong(song, opts) {
     if (opts.background && !song.localCoverFile && canReadEmbeddedFlacCover(song)) song.localCoverLightScanned = true;
     else song.localCoverLoaded = true;
     syncLocalSongAssetFields(song);
+    if (song.localCoverLoaded) scheduleLocalAssetCacheWrite(song);
     return false;
   }).finally(function(){
     song.localCoverLoading = false;
@@ -21186,6 +21737,7 @@ function loadLocalCoverForSong(song, token, opts) {
 async function preloadLocalSongAssets(song, opts) {
   opts = opts || {};
   if (!song || song.type !== 'local') return false;
+  await ensureLocalMetadataForSong(song, { applyCurrent: !!opts.applyCurrent, background: !!opts.background });
   await ensureLocalCoverForSong(song, {
     applyCurrent: !!opts.applyCurrent,
     background: !!opts.background,
@@ -21263,6 +21815,7 @@ async function handleLocalFolderFiles(files, opts) {
     showToast(opts.folderOnly ? '文件夹里没有找到 MP3 / FLAC 音乐' : '没有找到可播放的本地音乐');
     return;
   }
+  await hydrateLocalAssetCacheForSongs(songs);
   if (opts.folderPath && opts.persist !== false) saveLocalLibraryFolderPath(opts.folderPath);
   finalizeListenSession(false);
   localLibrarySongs = songs;
@@ -21296,7 +21849,7 @@ var fileInput = document.getElementById('file-input');
 if (fileInput) fileInput.addEventListener('change', function(e){ handleFiles(e.target.files); e.target.value = ''; });
 var localFolderInput = document.getElementById('local-folder-input');
 if (localFolderInput) localFolderInput.addEventListener('change', function(e){ handleLocalFolderFiles(e.target.files, { folderOnly: true }); e.target.value = ''; });
-function handleFiles(files) {
+async function handleFiles(files) {
   var list = fileListToArray(files);
   var audioFiles = list.filter(function(file){ return isLocalAudioFile(file, false); });
   if (audioFiles.length > 1) {
@@ -21312,6 +21865,7 @@ function handleFiles(files) {
   if (audioFile) {
     var lyricFile = findLocalLyricFile(audioFile, buildLocalLyricMaps(list));
     var singleSong = makeLocalSongFromFile(audioFile, lyricFile, imgFile);
+    await hydrateLocalAssetCacheForSongs([singleSong]);
     finalizeListenSession(false);
     localLibrarySongs = [singleSong];
     playQueue = [singleSong];
@@ -27461,7 +28015,13 @@ function currentDesktopSongMeta() {
   };
 }
 function normalizeDesktopLyricText(text) {
-  return String(text || '').replace(/\s+/g, ' ').trim();
+  return String(text || '')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map(function(line){ return line.replace(/[ \t]+/g, ' ').trim(); })
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('\n');
 }
 function currentDesktopLyricSnapshot() {
   var t = audio && isFinite(audio.currentTime) ? Number(audio.currentTime) : 0;
