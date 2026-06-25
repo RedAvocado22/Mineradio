@@ -36,6 +36,8 @@
 !include nsDialogs.nsh
 !include WinMessages.nsh
 
+!define MINERADIO_INSTALL_MARKER ".mineradio-install-root"
+
 !ifndef BUILD_UNINSTALLER
   Var MineradioWelcomePage
   Var MineradioHeroFont
@@ -50,6 +52,14 @@
   !ifndef BUILD_UNINSTALLER
     Call MineradioUsePreferredInstallDir
   !endif
+!macroend
+
+!macro customInstall
+  Call MineradioWriteInstallMarker
+!macroend
+
+!macro customUnInit
+  Call un.MineradioAbortUnsafeUninstallRoot
 !macroend
 
 !macro customWelcomePage
@@ -203,7 +213,9 @@ Function MineradioUsePreferredInstallDir
   ${GetOptions} $R0 "/D=" $R1
   ${IfNot} ${Errors}
   ${AndIf} $R1 != ""
-    StrCpy $INSTDIR "$R1"
+    Push "$R1"
+    Call MineradioNormalizeInstallDir
+    Pop $INSTDIR
   ${Else}
     IfFileExists "D:\*.*" 0 +2
     StrCpy $INSTDIR "D:\Mineradio"
@@ -212,6 +224,17 @@ FunctionEnd
 
 Function MineradioNormalizeInstallDir
   Exch $0
+  ${If} $0 == ""
+    StrCpy $0 "D:\Mineradio"
+    Exch $0
+    Return
+  ${EndIf}
+
+  StrCpy $4 "$0" 1 -1
+  ${If} $4 == "\"
+    StrCpy $0 "$0" -1
+  ${EndIf}
+
   StrLen $1 "$0"
   ${If} $1 == 2
     StrCpy $2 "$0" 1 1
@@ -225,8 +248,33 @@ Function MineradioNormalizeInstallDir
     ${AndIf} $3 == "\"
       StrCpy $0 "$0Mineradio"
     ${EndIf}
+  ${Else}
+    ${GetFileName} "$0" $2
+    ${If} $2 != "Mineradio"
+    ${AndIf} $2 != "mineradio"
+      StrCpy $0 "$0\Mineradio"
+    ${EndIf}
   ${EndIf}
   Exch $0
+FunctionEnd
+
+Function MineradioWriteInstallMarker
+  CreateDirectory "$INSTDIR"
+  ClearErrors
+  FileOpen $0 "$INSTDIR\${MINERADIO_INSTALL_MARKER}" w
+  ${If} ${Errors}
+    MessageBox MB_ICONSTOP|MB_OK "无法写入安装目录安全标记，安装已停止。请选择可写入的 Mineradio 专用文件夹。"
+    Abort
+  ${EndIf}
+  FileWrite $0 "Mineradio install root marker.$\r$\n"
+  FileClose $0
+FunctionEnd
+
+Function un.MineradioAbortUnsafeUninstallRoot
+  IfFileExists "$INSTDIR\${MINERADIO_INSTALL_MARKER}" safe 0
+  MessageBox MB_ICONSTOP|MB_OK "卸载已中止：$INSTDIR 不是 Mineradio 专用安装目录，缺少安全标记 ${MINERADIO_INSTALL_MARKER}。为避免误删用户文件，请手动删除 Mineradio 程序文件。"
+  Abort
+safe:
 FunctionEnd
 
 Function MineradioWelcomeShow
@@ -258,7 +306,7 @@ Function MineradioWelcomeShow
   Pop $0
   SetCtlColors $0 "" "3257F7"
 
-  ${NSD_CreateLabel} 22u 96u 238u 24u "为这台电脑安装 Mineradio。默认安装到 D:\Mineradio，下一步可以自由选择其它位置。"
+  ${NSD_CreateLabel} 22u 96u 238u 24u "为这台电脑安装 Mineradio。默认安装到 D:\Mineradio；选择其它位置时会自动落入专用 Mineradio 子文件夹。"
   Pop $0
   SendMessage $0 ${WM_SETFONT} $MineradioBodyFont 1
   SetCtlColors $0 "4B5263" "FFFFFF"
@@ -303,7 +351,7 @@ Function MineradioDirectoryShow
   SendMessage $0 ${WM_SETFONT} $MineradioTitleFont 1
   SetCtlColors $0 "111217" "FFFFFF"
 
-  ${NSD_CreateLabel} 22u 40u 238u 24u "你可以使用默认路径，也可以选择其它磁盘或文件夹。安装器会自动创建缺失的目录。"
+  ${NSD_CreateLabel} 22u 40u 238u 24u "你可以使用默认路径，也可以选择其它磁盘或文件夹。安装器会自动创建专用 Mineradio 子目录，避免卸载时影响其它文件。"
   Pop $0
   SendMessage $0 ${WM_SETFONT} $MineradioBodyFont 1
   SetCtlColors $0 "4B5263" "FFFFFF"
@@ -323,7 +371,7 @@ Function MineradioDirectoryShow
   SendMessage $0 ${WM_SETFONT} $MineradioSmallFont 1
   ${NSD_OnClick} $0 MineradioDirectoryBrowse
 
-  ${NSD_CreateLabel} 22u 122u 238u 12u "默认推荐：D:\Mineradio；选盘符会自动建文件夹。"
+  ${NSD_CreateLabel} 22u 122u 238u 12u "默认推荐：D:\Mineradio；选择现有文件夹会自动追加 Mineradio。"
   Pop $0
   SendMessage $0 ${WM_SETFONT} $MineradioSmallFont 1
   SetCtlColors $0 "6B7280" "FFFFFF"

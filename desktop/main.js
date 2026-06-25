@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, screen, session, globalShortcut, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, screen, session, globalShortcut, dialog, Tray, Menu } = require('electron');
 const net = require('net');
 const path = require('path');
 const fs = require('fs');
@@ -24,6 +24,9 @@ let wallpaperState = {};
 let htmlFullscreenActive = false;
 let windowFullscreenActive = false;
 let mainWindowStateTimer = null;
+let tray = null;
+let closeToTrayEnabled = true;
+let appQuitting = false;
 const registeredGlobalHotkeys = new Map();
 const authorizedLocalMusicRoots = new Set();
 
@@ -40,6 +43,7 @@ const NETEASE_LOGIN_PARTITION = 'persist:mineradio-netease-login';
 const NETEASE_LOGIN_URL = 'https://music.163.com/#/login';
 const QQ_LOGIN_PARTITION = 'persist:mineradio-qqmusic-login';
 const QQ_LOGIN_URL = 'https://y.qq.com/n/ryqq/profile';
+const DESKTOP_SHELL_SETTINGS_FILE = 'desktop-shell-settings.json';
 
 const CHROMIUM_PERFORMANCE_SWITCHES = [
   ['autoplay-policy', 'no-user-gesture-required'],
@@ -394,6 +398,123 @@ function focusMainWindow() {
   mainWindow.focus();
   sendWindowState(mainWindow);
   return true;
+}
+
+/**
+ * 读取桌面壳设置文件。托盘关闭策略需要早于前端加载生效，所以放在主进程持久化。
+ * @returns {{closeToTray?: boolean}} 已保存的桌面壳设置。
+ */
+function readDesktopShellSettings() {
+  try {
+    const file = path.join(app.getPath('userData'), DESKTOP_SHELL_SETTINGS_FILE);
+    if (!fs.existsSync(file)) return {};
+    return JSON.parse(fs.readFileSync(file, 'utf8')) || {};
+  } catch (_e) {
+    return {};
+  }
+}
+
+/**
+ * 写入桌面壳设置文件。该文件只保存主进程必须提前知道的窗口行为。
+ * @param {{closeToTray?: boolean}} patch 要覆盖的设置字段。
+ * @returns {{closeToTray?: boolean}} 写入后的完整设置。
+ */
+function writeDesktopShellSettings(patch) {
+  const file = path.join(app.getPath('userData'), DESKTOP_SHELL_SETTINGS_FILE);
+  const next = { ...readDesktopShellSettings(), ...(patch || {}) };
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(next, null, 2), 'utf8');
+  return next;
+}
+
+/**
+ * 应用已保存的桌面壳设置，确保关闭按钮行为在窗口创建前就确定。
+ * @returns {void}
+ */
+function applySavedDesktopShellSettings() {
+  const saved = readDesktopShellSettings();
+  if (typeof saved.closeToTray === 'boolean') closeToTrayEnabled = saved.closeToTray;
+}
+
+/**
+ * 读取 Windows 开机启动状态；开发环境和正式包都走 Electron 登录项接口。
+ * @returns {boolean} 当前账号登录后是否自动启动 Mineradio。
+ */
+function isStartupEnabled() {
+  if (process.platform !== 'win32') return false;
+  try {
+    return !!app.getLoginItemSettings().openAtLogin;
+  } catch (_e) {
+    return false;
+  }
+}
+
+/**
+ * 设置 Windows 开机启动。失败时直接抛错，由 IPC 返回明确错误。
+ * @param {boolean} enabled 是否开启开机启动。
+ * @returns {{ok:boolean, enabled:boolean}} 设置后的真实状态。
+ */
+function setStartupEnabled(enabled) {
+  if (process.platform !== 'win32') return { ok: false, enabled: false, unsupported: true };
+  app.setLoginItemSettings({
+    openAtLogin: !!enabled,
+    path: process.execPath,
+    args: [],
+  });
+  return { ok: true, enabled: isStartupEnabled() };
+}
+
+/**
+ * 根据当前状态重建托盘菜单，确保菜单勾选态和真实设置一致。
+ * @returns {void}
+ */
+function refreshTrayMenu() {
+  if (!tray) return;
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '显示 Mineradio', click: focusMainWindow },
+    {
+      label: '关闭按钮最小化到托盘',
+      type: 'checkbox',
+      checked: closeToTrayEnabled,
+      click: (item) => {
+        closeToTrayEnabled = !!item.checked;
+        writeDesktopShellSettings({ closeToTray: closeToTrayEnabled });
+        refreshTrayMenu();
+      },
+    },
+    {
+      label: '开机自动启动',
+      type: 'checkbox',
+      checked: isStartupEnabled(),
+      click: (item) => {
+        const result = setStartupEnabled(item.checked);
+        if (!result.ok) item.checked = false;
+        refreshTrayMenu();
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '退出 Mineradio',
+      click: () => {
+        appQuitting = true;
+        app.quit();
+      },
+    },
+  ]));
+}
+
+/**
+ * 创建系统托盘入口。托盘用于恢复窗口、切换关闭到托盘和开机启动。
+ * @returns {void}
+ */
+function createTray() {
+  if (tray || process.platform !== 'win32') return;
+  const icon = fs.existsSync(APP_ICON_ICO) ? APP_ICON_ICO : process.execPath;
+  tray = new Tray(icon);
+  tray.setToolTip(APP_NAME);
+  tray.on('click', focusMainWindow);
+  tray.on('double-click', focusMainWindow);
+  refreshTrayMenu();
 }
 
 function getUpdateDownloadDir() {
@@ -1249,6 +1370,23 @@ ipcMain.handle('desktop-window-close', (event) => {
   getSenderWindow(event)?.close();
 });
 
+ipcMain.handle('mineradio-tray-get-settings', () => {
+  return { ok: true, closeToTray: closeToTrayEnabled, startup: isStartupEnabled(), startupEnabled: isStartupEnabled() };
+});
+
+ipcMain.handle('mineradio-tray-set-close-to-tray', (_event, enabled) => {
+  closeToTrayEnabled = !!enabled;
+  writeDesktopShellSettings({ closeToTray: closeToTrayEnabled });
+  refreshTrayMenu();
+  return { ok: true, closeToTray: closeToTrayEnabled };
+});
+
+ipcMain.handle('mineradio-startup-set-enabled', (_event, enabled) => {
+  const result = setStartupEnabled(!!enabled);
+  refreshTrayMenu();
+  return result;
+});
+
 ipcMain.handle('mineradio-hotkeys-configure-global', (_event, bindings) => {
   return configureMineradioGlobalHotkeys(bindings);
 });
@@ -1566,6 +1704,13 @@ async function createWindow() {
   mainWindow.on('blur', () => sendWindowState(mainWindow));
   mainWindow.on('move', () => scheduleWindowStateSend(mainWindow));
   mainWindow.on('resize', () => scheduleWindowStateSend(mainWindow));
+  mainWindow.on('close', (event) => {
+    if (!appQuitting && closeToTrayEnabled) {
+      event.preventDefault();
+      mainWindow.hide();
+      sendWindowState(mainWindow);
+    }
+  });
   mainWindow.on('closed', () => {
     if (mainWindowStateTimer) {
       clearTimeout(mainWindowStateTimer);
@@ -1607,6 +1752,7 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(async () => {
+    applySavedDesktopShellSettings();
     screen.on('display-metrics-changed', () => {
       positionDesktopLyricsWindow();
       positionWallpaperWindow();
@@ -1615,6 +1761,7 @@ if (!gotSingleInstanceLock) {
     screen.on('display-added', () => scheduleWindowStateSend(mainWindow));
     screen.on('display-removed', () => scheduleWindowStateSend(mainWindow));
     await createWindow();
+    createTray();
   });
 
   app.on('activate', () => {
@@ -1623,10 +1770,11 @@ if (!gotSingleInstanceLock) {
   });
 
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+    if (process.platform !== 'darwin' && (appQuitting || !closeToTrayEnabled)) app.quit();
   });
 
   app.on('before-quit', () => {
+    appQuitting = true;
     unregisterMineradioGlobalHotkeys();
     closeOverlayWindows();
     if (localServer && localServer.close) localServer.close();

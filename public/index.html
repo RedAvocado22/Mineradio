@@ -2221,6 +2221,10 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
         <div class="fx-toggle dev-locked" id="t-wallpaperMode" onclick="toggleFx('wallpaperMode')" title="开发中，暂不可用"><span>壁纸模式<em class="fx-dev-badge">开发中</em></span><span class="dot"></span></div>
       </div>
       <div class="fx-section-label">桌面 / 壁纸</div>
+      <div class="fx-toggle-grid">
+        <div class="fx-toggle" id="t-closeToTray" onclick="toggleDesktopShellSetting('closeToTray')" title="点击窗口关闭按钮时隐藏到系统托盘"><span>关闭到托盘</span><span class="dot"></span></div>
+        <div class="fx-toggle" id="t-startupLaunch" onclick="toggleDesktopShellSetting('startupLaunch')" title="登录 Windows 后自动启动 Mineradio"><span>开机启动</span><span class="dot"></span></div>
+      </div>
       <div class="fx-slider"><label>桌面歌词大小</label><input id="fx-desktoplyricssize" type="range" min="0.72" max="1.55" step="0.01"><output></output></div>
       <div class="fx-slider"><label>桌面歌词透明</label><input id="fx-desktoplyricsopacity" type="range" min="0.28" max="1" step="0.01"><output></output></div>
       <div class="fx-slider"><label>桌面歌词高度</label><input id="fx-desktoplyricsy" type="range" min="0.08" max="0.92" step="0.01"><output></output></div>
@@ -2231,6 +2235,16 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
         <button data-desktop-lyrics-fps="60">60</button>
         <button data-desktop-lyrics-fps="120">120</button>
         <button data-desktop-lyrics-fps="0">无上限</button>
+      </div>
+      <div class="fx-section-label">桌面歌词布局</div>
+      <div class="fx-seg" id="desktop-lyrics-rows-seg">
+        <button data-desktop-lyrics-rows="single">单行</button>
+        <button data-desktop-lyrics-rows="double">双行</button>
+      </div>
+      <div class="fx-seg" id="desktop-lyrics-align-seg">
+        <button data-desktop-lyrics-align="left">左对齐</button>
+        <button data-desktop-lyrics-align="center">居中</button>
+        <button data-desktop-lyrics-align="right">右对齐</button>
       </div>
       <div class="fx-slider dev-locked"><label>壁纸透明度</label><input id="fx-wallpaperopacity" type="range" min="0.35" max="1" step="0.01" disabled><output></output></div>
     </div>
@@ -2795,6 +2809,7 @@ var VISUAL_GUIDE_SEEN_STORE_KEY = 'mineradio-visual-guide-seen-v2';
 var LOCAL_BEATMAP_STORE_KEY = 'mineradio-local-beatmaps-v1';
 var LOCAL_BEAT_PREF_STORE_KEY = 'mineradio-local-beatmap-prefs-v1';
 var LOCAL_LIBRARY_FOLDER_STORE_KEY = 'mineradio-local-library-folder-v1';
+var PLAYBACK_SESSION_STORE_KEY = 'mineradio-playback-session-v1';
 var LOCAL_ASSET_CACHE_DB_NAME = 'mineradio-local-assets-v1';
 var LOCAL_ASSET_CACHE_STORE = 'assets';
 var LOCAL_ASSET_CACHE_SCHEMA = 1;
@@ -3318,6 +3333,8 @@ var fxDefaults = {
   desktopLyricsCinema: true,
   desktopLyricsHighlight: false,
   desktopLyricsFps: 60,
+  desktopLyricsRows: 'double',
+  desktopLyricsAlign: 'center',
   wallpaperMode: false,
   wallpaperOpacity: 1,
   floatLayer: false, cinema: true, edge: false, aiDepth: false, bloom: false, lyricGlow: true,
@@ -3407,6 +3424,8 @@ var PACKAGED_DEFAULT_FX_SNAPSHOT = Object.freeze({
   desktopLyricsCinema: true,
   desktopLyricsHighlight: false,
   desktopLyricsFps: 60,
+  desktopLyricsRows: 'double',
+  desktopLyricsAlign: 'center',
   performanceBackground: 'auto',
   performanceQuality: 'high',
   liveBackgroundKeep: false,
@@ -7684,6 +7703,8 @@ function readSavedLyricLayout() {
       desktopLyricsCinema: desktopLyricsSchemaReady ? raw.desktopLyricsCinema !== false : fxDefaults.desktopLyricsCinema,
       desktopLyricsHighlight: desktopLyricsSchemaReady ? raw.desktopLyricsHighlight === true : fxDefaults.desktopLyricsHighlight,
       desktopLyricsFps: desktopLyricsSchemaReady ? normalizeDesktopLyricsFps(raw.desktopLyricsFps) : fxDefaults.desktopLyricsFps,
+      desktopLyricsRows: desktopLyricsSchemaReady ? normalizeDesktopLyricsRows(raw.desktopLyricsRows) : fxDefaults.desktopLyricsRows,
+      desktopLyricsAlign: desktopLyricsSchemaReady ? normalizeDesktopLyricsAlign(raw.desktopLyricsAlign) : fxDefaults.desktopLyricsAlign,
       performanceBackground: normalizePerformanceBackgroundMode(raw.performanceBackground, raw.liveBackgroundKeep === true),
       performanceQuality: normalizePerformanceQuality(raw.performanceQuality),
       liveBackgroundKeep: normalizePerformanceBackgroundMode(raw.performanceBackground, raw.liveBackgroundKeep === true) === 'keep',
@@ -7774,6 +7795,8 @@ function saveLyricLayout() {
       desktopLyricsCinema: fx.desktopLyricsCinema !== false,
       desktopLyricsHighlight: fx.desktopLyricsHighlight === true,
       desktopLyricsFps: normalizeDesktopLyricsFps(fx.desktopLyricsFps),
+      desktopLyricsRows: normalizeDesktopLyricsRows(fx.desktopLyricsRows),
+      desktopLyricsAlign: normalizeDesktopLyricsAlign(fx.desktopLyricsAlign),
       performanceBackground: normalizePerformanceBackgroundMode(fx.performanceBackground, fx.liveBackgroundKeep === true),
       performanceQuality: normalizePerformanceQuality(fx.performanceQuality),
       liveBackgroundKeep: normalizePerformanceBackgroundMode(fx.performanceBackground, fx.liveBackgroundKeep === true) === 'keep',
@@ -7813,6 +7836,23 @@ function normalizeDesktopLyricsFps(value) {
   if (n <= 45) return 30;
   if (n <= 90) return 60;
   return 120;
+}
+/**
+ * 归一化桌面歌词行数模式，返回 overlay 可直接消费的稳定契约值。
+ * @param {*} value 用户存档或按钮传入的原始值。
+ * @returns {string} `single` 表示只渲染当前行，`double` 表示保留两行。
+ */
+function normalizeDesktopLyricsRows(value) {
+  return String(value || '') === 'single' ? 'single' : 'double';
+}
+/**
+ * 归一化桌面歌词水平对齐方式，避免未知值进入 overlay 后造成布局漂移。
+ * @param {*} value 用户存档或按钮传入的原始值。
+ * @returns {string} `left`、`center` 或 `right`。
+ */
+function normalizeDesktopLyricsAlign(value) {
+  var normalized = String(value || '');
+  return /^(left|center|right)$/.test(normalized) ? normalized : 'center';
 }
 function normalizeShelfCameraMode(value) {
   return String(value || '') === 'static' ? 'static' : 'dynamic';
@@ -18861,6 +18901,106 @@ function queueItemKey(song) {
   if (song.id != null && song.id !== '') return 'song:' + song.id;
   return String(song.name || '') + '|' + String(song.artist || '');
 }
+var playbackSessionSaveState = { lastAt:0 };
+var pendingPlaybackSessionResume = { idx:-1, time:0 };
+
+/**
+ * 生成本地播放会话的稳定曲目标识。只恢复本地库，避免账号和网络状态导致错误自动播放。
+ * @param {{localKey?: string}} song 当前本地歌曲。
+ * @returns {string} 可持久化的歌曲标识。
+ */
+function localPlaybackSessionSongKey(song) {
+  return song && song.localKey ? String(song.localKey) : '';
+}
+
+/**
+ * 读取上次本地播放会话。
+ * @returns {{folderPath?: string, songKey?: string, currentTime?: number, playMode?: string}|null} 上次播放会话。
+ */
+function readPlaybackSession() {
+  try {
+    var raw = JSON.parse(localStorage.getItem(PLAYBACK_SESSION_STORE_KEY) || 'null');
+    if (!raw || raw.schema !== 1 || raw.type !== 'local-folder') return null;
+    return raw;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 保存当前本地播放会话。该函数会节流，避免 timeupdate 高频写 localStorage。
+ * @param {boolean} force 是否忽略节流立即保存。
+ * @returns {void}
+ */
+function savePlaybackSession(force) {
+  var now = Date.now();
+  if (!force && now - playbackSessionSaveState.lastAt < 2200) return;
+  playbackSessionSaveState.lastAt = now;
+  try {
+    var song = playQueue && currentIdx >= 0 ? playQueue[currentIdx] : null;
+    var folderPath = savedLocalLibraryFolderPath();
+    var songKey = localPlaybackSessionSongKey(song);
+    if (!folderPath || !songKey) return;
+    localStorage.setItem(PLAYBACK_SESSION_STORE_KEY, JSON.stringify({
+      schema: 1,
+      type: 'local-folder',
+      folderPath: folderPath,
+      songKey: songKey,
+      currentIdx: currentIdx,
+      currentTime: getPlaybackCurrentSeconds(),
+      wasPlaying: !!(audio && audio.src && !audio.paused && !audio.ended),
+      playMode: /^(loop|shuffle|single)$/.test(playMode) ? playMode : 'loop',
+      savedAt: now
+    }));
+  } catch (e) {}
+}
+
+/**
+ * 清理本地播放会话，避免用户清空队列后下次又恢复旧曲目。
+ * @returns {void}
+ */
+function clearPlaybackSession() {
+  try { localStorage.removeItem(PLAYBACK_SESSION_STORE_KEY); } catch (e) {}
+}
+
+/**
+ * 在刚扫描出的本地库里定位上次播放曲目。
+ * @param {Array<object>} songs 本地库歌曲列表。
+ * @param {{songKey?: string, currentIdx?: number}} session 上次播放会话。
+ * @returns {number} 匹配到的队列索引，未命中返回 -1。
+ */
+function findPlaybackSessionIndex(songs, session) {
+  var key = session && session.songKey ? String(session.songKey) : '';
+  if (!key || !Array.isArray(songs)) return -1;
+  for (var i = 0; i < songs.length; i++) {
+    if (localPlaybackSessionSongKey(songs[i]) === key) return i;
+  }
+  var fallbackIdx = Number(session.currentIdx);
+  return isFinite(fallbackIdx) && fallbackIdx >= 0 && fallbackIdx < songs.length ? fallbackIdx : -1;
+}
+
+/**
+ * 本地库自动重载后恢复上次播放曲目和进度，但不自动开始播放。
+ * @param {Array<object>} songs 本地库歌曲列表。
+ * @param {string} folderPath 当前恢复的本地库目录。
+ * @returns {boolean} 是否命中并应用了上次会话。
+ */
+function restorePlaybackSessionForLocalLibrary(songs, folderPath) {
+  var session = readPlaybackSession();
+  if (!session || !folderPath || session.folderPath !== folderPath) return false;
+  var idx = findPlaybackSessionIndex(songs, session);
+  if (idx < 0) return false;
+  currentIdx = idx;
+  pendingPlaybackSessionResume = { idx:idx, time:Math.max(0, Number(session.currentTime) || 0) };
+  playMode = /^(loop|shuffle|single)$/.test(session.playMode || '') ? session.playMode : playMode;
+  updatePlayModeButton(false);
+  try { updateControlTrackInfo(songs[idx]); } catch (e) {}
+  playing = false;
+  setPlayIcon(false);
+  forcePlaybackControlsInteractive();
+  showToast('已恢复上次播放位置');
+  return true;
+}
 function queueSong(song, opts) {
   opts = opts || {};
   if (!song) return -1;
@@ -19156,6 +19296,7 @@ function syncPlaybackStateFromAudioEvent(reason) {
   if (!isPlaying) hideLoading();
   if (reason === 'play' || reason === 'playing') switchPlaybackVisualToEmily();
   forcePlaybackControlsInteractive();
+  updateSystemMediaSessionPlaybackState(reason);
 }
 
 function isPlaybackRecursionError(err) {
@@ -19674,7 +19815,9 @@ async function togglePlay() {
   try {
     forcePlaybackControlsInteractive();
     if ((!audio || !audio.src) && playQueue.length && currentIdx >= 0) {
-      await playQueueAt(currentIdx, { manual: true });
+      var resumeAt = pendingPlaybackSessionResume && pendingPlaybackSessionResume.idx === currentIdx ? pendingPlaybackSessionResume.time : 0;
+      pendingPlaybackSessionResume = { idx:-1, time:0 };
+      await playQueueAt(currentIdx, { manual: true, resumeAt: resumeAt });
       return;
     }
     if (!audio) return;
@@ -19732,6 +19875,7 @@ function shuffleQueue() {
 }
 function clearQueue() {
   playQueue = []; currentIdx = -1;
+  clearPlaybackSession();
   safeRenderQueuePanel('clear-queue');
   safeShelfRebuild('clear-queue');
   updateCustomCoverButton();
@@ -19742,6 +19886,7 @@ function removeFromQueue(idx) {
   if (idx < 0 || idx >= playQueue.length) return;
   playQueue.splice(idx, 1);
   if (currentIdx >= playQueue.length) currentIdx = playQueue.length - 1;
+  savePlaybackSession(true);
   safeRenderQueuePanel('remove-queue-item');
   safeShelfRebuild('remove-queue-item');
   updateCustomCoverButton();
@@ -19800,6 +19945,7 @@ function cyclePlayMode() {
   var idx = modes.indexOf(playMode);
   playMode = modes[(idx + 1) % modes.length];
   updatePlayModeButton(true);
+  savePlaybackSession(true);
   showToast('播放模式: ' + playModeLabel(playMode));
 }
 updatePlayModeButton(false);
@@ -20968,6 +21114,8 @@ function updatePlaybackProgressUi() {
   setProgressVisual(durationSec > 0 ? (currentSec / durationSec * 100) : 0);
   var timeDisplay = document.getElementById('time-display');
   if (timeDisplay) timeDisplay.textContent = formatProgramTime(currentSec) + ' / ' + (durationSec > 0 ? formatProgramTime(durationSec) : '0:00');
+  updateSystemMediaSessionPosition();
+  savePlaybackSession(false);
 }
 function bindPlaybackProgressEvents(audioEl) {
   if (!audioEl || audioEl._mineradioProgressBound) return;
@@ -20979,6 +21127,96 @@ function bindPlaybackProgressEvents(audioEl) {
     audioEl.addEventListener(name, function(){ syncPlaybackStateFromAudioEvent(name); });
   });
 }
+/**
+ * 生成 Windows 媒体浮窗可用的封面列表。空封面直接返回空数组，避免 MediaMetadata 报错。
+ * @param {{cover?: string}} meta 当前播放元数据。
+ * @returns {Array<{src:string,sizes:string,type:string}>} Media Session artwork 列表。
+ */
+function systemMediaSessionArtwork(meta) {
+  var cover = meta && meta.cover ? String(meta.cover) : '';
+  if (!cover) return [];
+  return [
+    { src: cover, sizes: '96x96', type: 'image/png' },
+    { src: cover, sizes: '256x256', type: 'image/png' },
+    { src: cover, sizes: '512x512', type: 'image/png' }
+  ];
+}
+/**
+ * 同步系统媒体控制元数据，供 Windows 音量浮窗、键盘媒体键和蓝牙耳机控制显示。
+ * @returns {void}
+ */
+function updateSystemMediaSessionMetadata() {
+  if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+  var meta = currentDesktopSongMeta();
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: meta.title || 'Mineradio',
+      artist: meta.artist || '',
+      album: 'Mineradio',
+      artwork: systemMediaSessionArtwork(meta)
+    });
+  } catch (e) {}
+}
+/**
+ * 同步系统媒体控制播放状态。这里不改变播放器状态，只把真实 audio 状态暴露给系统。
+ * @param {string} reason 触发同步的 audio 事件名，用于后续排障定位。
+ * @returns {void}
+ */
+function updateSystemMediaSessionPlaybackState(reason) {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = audio && audio.src
+      ? (audio.paused || audio.ended ? 'paused' : 'playing')
+      : 'none';
+    updateSystemMediaSessionMetadata();
+    updateSystemMediaSessionPosition();
+  } catch (e) {}
+}
+/**
+ * 同步系统媒体控制进度，只有 duration 可用时才调用 setPositionState。
+ * @returns {void}
+ */
+function updateSystemMediaSessionPosition() {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState || !audio) return;
+  var duration = getPlaybackDurationSeconds();
+  if (!isFinite(duration) || duration <= 0) return;
+  var position = Math.max(0, Math.min(duration, getPlaybackCurrentSeconds()));
+  var playbackRate = audio && isFinite(audio.playbackRate) && audio.playbackRate > 0 ? audio.playbackRate : 1;
+  try {
+    navigator.mediaSession.setPositionState({ duration: duration, position: position, playbackRate: playbackRate });
+  } catch (e) {}
+}
+/**
+ * 注册系统媒体键动作。动作最终回到现有播放函数，避免新增第二套播放状态机。
+ * @returns {void}
+ */
+function configureSystemMediaSessionControls() {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setActionHandler) return;
+  var handlers = {
+    play: function(){ if (!audio || audio.paused || audio.ended) togglePlay(); },
+    pause: function(){ if (audio && !audio.paused && !audio.ended) togglePlay(); },
+    previoustrack: prevTrack,
+    nexttrack: nextTrack,
+    seekbackward: function(details){
+      if (!audio) return;
+      audio.currentTime = Math.max(0, getPlaybackCurrentSeconds() - (details && details.seekOffset || 10));
+    },
+    seekforward: function(details){
+      if (!audio) return;
+      var duration = getPlaybackDurationSeconds();
+      audio.currentTime = Math.min(duration || Number.MAX_SAFE_INTEGER, getPlaybackCurrentSeconds() + (details && details.seekOffset || 10));
+    },
+    seekto: function(details){
+      if (!audio || !details || !isFinite(details.seekTime)) return;
+      var duration = getPlaybackDurationSeconds();
+      audio.currentTime = Math.max(0, Math.min(duration || details.seekTime, details.seekTime));
+    }
+  };
+  Object.keys(handlers).forEach(function(action){
+    try { navigator.mediaSession.setActionHandler(action, handlers[action]); } catch (e) {}
+  });
+}
+configureSystemMediaSessionControls();
 function emitProgressDragParticles(x, y) {
   var now = performance.now();
   if (now - progressDragState.lastParticleAt < 46) return;
@@ -21839,6 +22077,10 @@ async function handleLocalFolderFiles(files, opts) {
     var tail = (opts.truncated ? '，文件较多已截断' : '') + (opts.folderPath ? '，下次启动自动载入' : '');
     showToast('已导入 ' + songs.length + ' 首本地音乐，后台加载封面/歌词' + tail);
   }
+  if (opts.restored && restorePlaybackSessionForLocalLibrary(songs, opts.folderPath || savedLocalLibraryFolderPath())) {
+    safeRenderQueuePanel('playback-session-restore', { scrollCurrent: true });
+    return;
+  }
   if (opts.autoPlay === false) {
     forcePlaybackControlsInteractive();
     return;
@@ -22023,6 +22265,8 @@ function normalizeFxArchiveSnapshot(raw) {
     desktopLyricsCinema: raw.desktopLyricsCinema !== false,
     desktopLyricsHighlight: raw.desktopLyricsHighlight === true,
     desktopLyricsFps: normalizeDesktopLyricsFps(Object.prototype.hasOwnProperty.call(raw, 'desktopLyricsFps') ? raw.desktopLyricsFps : fxDefaults.desktopLyricsFps),
+    desktopLyricsRows: normalizeDesktopLyricsRows(raw.desktopLyricsRows || fxDefaults.desktopLyricsRows),
+    desktopLyricsAlign: normalizeDesktopLyricsAlign(raw.desktopLyricsAlign || fxDefaults.desktopLyricsAlign),
     performanceBackground: normalizePerformanceBackgroundMode(raw.performanceBackground, raw.liveBackgroundKeep === true),
     performanceQuality: normalizePerformanceQuality(raw.performanceQuality),
     liveBackgroundKeep: normalizePerformanceBackgroundMode(raw.performanceBackground, raw.liveBackgroundKeep === true) === 'keep',
@@ -23219,6 +23463,20 @@ function updateDesktopLyricsFpsControls() {
     btn.classList.toggle('active', normalizeDesktopLyricsFps(btn.getAttribute('data-desktop-lyrics-fps')) === fps);
   });
 }
+/**
+ * 同步桌面歌词布局分段控件，保证面板打开时显示真实持久化状态。
+ * @returns {void}
+ */
+function updateDesktopLyricsLayoutControls() {
+  var rows = normalizeDesktopLyricsRows(fx.desktopLyricsRows);
+  var align = normalizeDesktopLyricsAlign(fx.desktopLyricsAlign);
+  document.querySelectorAll('#desktop-lyrics-rows-seg [data-desktop-lyrics-rows]').forEach(function(btn){
+    btn.classList.toggle('active', normalizeDesktopLyricsRows(btn.getAttribute('data-desktop-lyrics-rows')) === rows);
+  });
+  document.querySelectorAll('#desktop-lyrics-align-seg [data-desktop-lyrics-align]').forEach(function(btn){
+    btn.classList.toggle('active', normalizeDesktopLyricsAlign(btn.getAttribute('data-desktop-lyrics-align')) === align);
+  });
+}
 function updatePerformanceControls() {
   fx.performanceBackground = normalizePerformanceBackgroundMode(fx.performanceBackground, fx.liveBackgroundKeep === true);
   fx.liveBackgroundKeep = fx.performanceBackground === 'keep';
@@ -23319,6 +23577,7 @@ function updateFxInputs() {
   var desktopLyricsHighlightToggle = document.getElementById('t-desktopLyricsHighlight');
   if (desktopLyricsHighlightToggle) desktopLyricsHighlightToggle.classList.toggle('on', fx.desktopLyricsHighlight === true);
   updateDesktopLyricsFpsControls();
+  updateDesktopLyricsLayoutControls();
   var wallpaperModeToggle = document.getElementById('t-wallpaperMode');
   if (wallpaperModeToggle) wallpaperModeToggle.classList.toggle('on', fx.wallpaperMode);
   var shelfPodcastsToggle = document.getElementById('t-shelfShowPodcasts');
@@ -23580,6 +23839,7 @@ function relabelFxPanelControls() {
   setFxSectionBefore('fx-lyricscale', '位置与角度');
   setFxSectionBefore('fx-desktoplyricssize', '桌面歌词');
   setFxSectionBefore('desktop-lyrics-fps-seg', '桌面歌词帧率');
+  setFxSectionBefore('desktop-lyrics-rows-seg', '桌面歌词布局');
   setFxSectionBefore('shelf-seg', '3D 歌单架');
   setFxSectionBefore('shelf-camera-seg', '歌单架镜头');
   setFxSectionBefore('shelf-presence-seg', '歌单架显示');
@@ -24163,6 +24423,24 @@ function bindFxPanel() {
       saveLyricLayout();
       pushDesktopLyricsState(true);
       showToast(fx.desktopLyricsFps ? ('桌面歌词帧数 ' + fx.desktopLyricsFps) : '桌面歌词帧数无上限');
+    });
+  });
+  document.querySelectorAll('#desktop-lyrics-rows-seg [data-desktop-lyrics-rows]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      fx.desktopLyricsRows = normalizeDesktopLyricsRows(btn.getAttribute('data-desktop-lyrics-rows'));
+      updateDesktopLyricsLayoutControls();
+      saveLyricLayout();
+      pushDesktopLyricsState(true);
+      showToast(fx.desktopLyricsRows === 'single' ? '桌面歌词单行显示' : '桌面歌词双行显示');
+    });
+  });
+  document.querySelectorAll('#desktop-lyrics-align-seg [data-desktop-lyrics-align]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      fx.desktopLyricsAlign = normalizeDesktopLyricsAlign(btn.getAttribute('data-desktop-lyrics-align'));
+      updateDesktopLyricsLayoutControls();
+      saveLyricLayout();
+      pushDesktopLyricsState(true);
+      showToast(fx.desktopLyricsAlign === 'left' ? '桌面歌词左对齐' : (fx.desktopLyricsAlign === 'right' ? '桌面歌词右对齐' : '桌面歌词居中'));
     });
   });
   document.querySelectorAll('#performance-background-seg [data-performance-background]').forEach(function(btn){
@@ -28014,13 +28292,14 @@ function currentDesktopSongMeta() {
     cover: (typeof songCoverSrc === 'function' && song) ? (songCoverSrc(song, 360) || song.cover || '') : (song.cover || '')
   };
 }
-function normalizeDesktopLyricText(text) {
+function normalizeDesktopLyricText(text, maxLines) {
+  maxLines = normalizeDesktopLyricsRows(maxLines || (fx && fx.desktopLyricsRows)) === 'single' ? 1 : 2;
   return String(text || '')
     .replace(/\r/g, '\n')
     .split('\n')
     .map(function(line){ return line.replace(/[ \t]+/g, ' ').trim(); })
     .filter(Boolean)
-    .slice(0, 2)
+    .slice(0, maxLines)
     .join('\n');
 }
 function currentDesktopLyricSnapshot() {
@@ -28158,6 +28437,8 @@ function desktopLyricsPayload(forceBeatMap) {
     fontWeight: lyricFontWeightValue(),
     letterSpacing: clampRange(Number(fx.lyricLetterSpacing) || 0, -0.04, 0.18),
     lineHeight: lyricLineHeightFactor(),
+    rows: normalizeDesktopLyricsRows(fx.desktopLyricsRows),
+    align: normalizeDesktopLyricsAlign(fx.desktopLyricsAlign),
     lyricScale: clampRange(Number(fx.lyricScale) || 1, 0.35, 1.65),
     feather: lyricsHasNativeKaraoke ? 0.030 : 0.055,
     motion: desktopLyricsMotionPayload(),
@@ -28268,6 +28549,66 @@ function toggleFullscreen() {
   }
 }
 
+var desktopShellSettings = { closeToTray:true, startupLaunch:false };
+
+/**
+ * 把主进程返回的桌面壳设置同步到设置面板按钮。
+ * @param {{closeToTray?: boolean, startup?: boolean, startupEnabled?: boolean}} next 主进程设置快照。
+ * @returns {void}
+ */
+function applyDesktopShellSettings(next) {
+  next = next || {};
+  if (typeof next.closeToTray === 'boolean') desktopShellSettings.closeToTray = next.closeToTray;
+  if (typeof next.startupEnabled === 'boolean') desktopShellSettings.startupLaunch = next.startupEnabled;
+  else if (typeof next.startup === 'boolean') desktopShellSettings.startupLaunch = next.startup;
+  var closeBtn = document.getElementById('t-closeToTray');
+  var startupBtn = document.getElementById('t-startupLaunch');
+  if (closeBtn) closeBtn.classList.toggle('on', !!desktopShellSettings.closeToTray);
+  if (startupBtn) startupBtn.classList.toggle('on', !!desktopShellSettings.startupLaunch);
+}
+
+/**
+ * 从 Electron 主进程读取托盘和开机启动设置。
+ * @returns {Promise<void>} 设置同步完成。
+ */
+function refreshDesktopShellSettings() {
+  var api = window.desktopWindow;
+  if (!api || !api.isDesktop || typeof api.getTraySettings !== 'function') {
+    applyDesktopShellSettings(desktopShellSettings);
+    return Promise.resolve();
+  }
+  return api.getTraySettings().then(function(result){
+    if (result && result.ok) applyDesktopShellSettings(result);
+  }).catch(function(){
+    applyDesktopShellSettings(desktopShellSettings);
+  });
+}
+
+/**
+ * 切换主进程桌面壳设置。开机启动走 Windows 登录项，关闭到托盘走主进程配置文件。
+ * @param {'closeToTray'|'startupLaunch'} key 要切换的设置项。
+ * @returns {void}
+ */
+function toggleDesktopShellSetting(key) {
+  var api = window.desktopWindow;
+  if (!api || !api.isDesktop) return;
+  if (key === 'closeToTray' && typeof api.setCloseToTray === 'function') {
+    var closeNext = !desktopShellSettings.closeToTray;
+    api.setCloseToTray(closeNext).then(function(result){
+      applyDesktopShellSettings({ closeToTray: result && result.closeToTray === true });
+      showToast(closeNext ? '关闭按钮已改为最小化到托盘' : '关闭按钮将直接退出');
+    }).catch(function(){ showToast('关闭到托盘设置失败'); });
+  }
+  if (key === 'startupLaunch' && typeof api.setStartupEnabled === 'function') {
+    var startupNext = !desktopShellSettings.startupLaunch;
+    api.setStartupEnabled(startupNext).then(function(result){
+      var enabled = !!(result && result.enabled);
+      applyDesktopShellSettings({ startupEnabled: enabled });
+      showToast(enabled ? '开机启动已开启' : '开机启动已关闭');
+    }).catch(function(){ showToast('开机启动设置失败'); });
+  }
+}
+
 (function initDesktopWindowShell(){
   var api = window.desktopWindow;
   if (!api || !api.isDesktop) return;
@@ -28277,6 +28618,7 @@ function toggleFullscreen() {
   document.body.classList.remove('desktop-fullscreen');
   desktopFullscreenActive = false;
   syncCursorAutoHideMode();
+  refreshDesktopShellSettings();
 
   var maxBtn = document.querySelector('[data-window-action="maximize"]');
   var maxIcon = maxBtn && maxBtn.querySelector('.icon-maximize');
