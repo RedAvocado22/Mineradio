@@ -2824,6 +2824,9 @@ var localLibraryProcessToken = 0;
 var localLibraryProcessing = { active:false, token:0, total:0, assetsDone:0 };
 var localLibraryProgressHideTimer = null;
 var localAssetUiRefreshTimer = null;
+var LOCAL_ASSET_LIGHT_SCAN_BYTES = 4 * 1024 * 1024;
+var LOCAL_ASSET_IDLE_DELAY_MS = 520;
+var LOCAL_ASSET_PLAYING_DELAY_MS = 1800;
 var likedSongMap = {}, likeBusyMap = {}, likeStatusToken = 0;
 var collectTargetSong = null, collectBusy = false;
 var uploadTipTimer = null, uploadTipAttempts = 0;
@@ -12254,11 +12257,14 @@ function syncLocalSongAssetFields(sourceSong) {
     (list || []).forEach(function(target){
       if (!target || target === sourceSong || target.localKey !== sourceSong.localKey) return;
       if (sourceSong.localCoverDataUrl && !target.localCoverDataUrl) target.localCoverDataUrl = sourceSong.localCoverDataUrl;
+      if (sourceSong.localCoverLoaded) target.localCoverLoaded = true;
+      if (sourceSong.localCoverLightScanned) target.localCoverLightScanned = true;
       if (sourceSong.localCoverFile && !target.localCoverFile) target.localCoverFile = sourceSong.localCoverFile;
       if (sourceSong.localCoverFileName && !target.localCoverFileName) target.localCoverFileName = sourceSong.localCoverFileName;
       if (sourceSong.localCoverObjectUrl && !target.localCoverObjectUrl) target.localCoverObjectUrl = sourceSong.localCoverObjectUrl;
       if (sourceSong.localLyricText && !target.localLyricText) target.localLyricText = sourceSong.localLyricText;
       if (sourceSong.localLyricLoaded) target.localLyricLoaded = true;
+      if (sourceSong.localLyricLightScanned) target.localLyricLightScanned = true;
       if (sourceSong.localLyricFile && !target.localLyricFile) target.localLyricFile = sourceSong.localLyricFile;
       if (sourceSong.localLyricFileName && !target.localLyricFileName) target.localLyricFileName = sourceSong.localLyricFileName;
       if (sourceSong.localLyricTagName && !target.localLyricTagName) target.localLyricTagName = sourceSong.localLyricTagName;
@@ -12352,6 +12358,22 @@ function updateLocalLibraryProcessingProgress(done) {
     }, 5200);
   }
 }
+function localAssetBackgroundDelayMs() {
+  var delay = isHiddenForBackgroundOptimization() ? 80 : LOCAL_ASSET_IDLE_DELAY_MS;
+  if (playing || (audio && audio.src && !audio.paused)) delay = Math.max(delay, LOCAL_ASSET_PLAYING_DELAY_MS);
+  if (typeof isRenderInteractionActive === 'function' && isRenderInteractionActive()) delay = Math.max(delay, 720);
+  return delay;
+}
+async function waitForLocalAssetPreloadTurn(token) {
+  await yieldToIdle(localAssetBackgroundDelayMs());
+  var guard = 0;
+  while (token === localLibraryProcessToken && guard < 8) {
+    var interacting = typeof isRenderInteractionActive === 'function' && isRenderInteractionActive();
+    if (!interacting && !playToggleBusy) break;
+    guard++;
+    await yieldToIdle(localAssetBackgroundDelayMs());
+  }
+}
 function startLocalLibraryBackgroundProcessing(songs, opts) {
   opts = opts || {};
   songs = (songs || []).filter(function(song){ return song && song.type === 'local'; });
@@ -12370,11 +12392,13 @@ async function runLocalLibraryBackgroundProcessing(songs, token, opts) {
   try {
     for (var i = 0; i < songs.length; i++) {
       if (token !== localLibraryProcessToken) return;
-      await preloadLocalSongAssets(songs[i], { token:token, applyCurrent:true });
+      await waitForLocalAssetPreloadTurn(token);
+      if (token !== localLibraryProcessToken) return;
+      await preloadLocalSongAssets(songs[i], { token:token, applyCurrent:true, background:true });
       localLibraryProcessing.assetsDone = i + 1;
       updateLocalLibraryProcessingProgress(false);
       if (i % 5 === 0 || i === songs.length - 1) refreshLocalSongAssetUi(songs[i], 'local-library-assets');
-      await yieldToIdle(isHiddenForBackgroundOptimization() ? 20 : 90);
+      await yieldToIdle(localAssetBackgroundDelayMs());
     }
   } finally {
     if (token === localLibraryProcessToken) {
@@ -18906,6 +18930,9 @@ function applyLocalOriginalLyricsState(song) {
 function canReadEmbeddedFlacLyrics(song) {
   return !!(song && song.localFile && /\.flac$/i.test(song.localFile.name || song.localPath || song.localFilePathAbsolute || ''));
 }
+function canReadEmbeddedFlacCover(song) {
+  return !!(song && song.localFile && /\.flac$/i.test(song.localFile.name || song.localPath || song.localFilePathAbsolute || ''));
+}
 function maybeApplyLocalLyricsForSong(song, opts) {
   opts = opts || {};
   if (!opts.applyCurrent) return;
@@ -18924,6 +18951,9 @@ function ensureLocalLyricsForSong(song, opts) {
   if (song.localLyricPromise) {
     return song.localLyricPromise.then(function(ok){
       maybeApplyLocalLyricsForSong(song, opts);
+      if (!ok && !opts.background && !song.localLyricLoaded && !song.localLyricText && canReadEmbeddedFlacLyrics(song)) {
+        return ensureLocalLyricsForSong(song, opts);
+      }
       return ok;
     });
   }
@@ -18934,20 +18964,29 @@ function ensureLocalLyricsForSong(song, opts) {
   song.localLyricLoading = true;
   var lyricPromise = song.localLyricFile
     ? readLocalTextFile(song.localLyricFile).then(function(text){ return { text: text, source: song.localLyricFile.name || 'local lyrics file' }; })
-    : extractFlacEmbeddedLyricsText(song.localFile).then(function(text){ return { text: text, source: text ? 'FLAC LYRICS' : '' }; });
+    : extractFlacEmbeddedLyricsText(song.localFile, { light: !!opts.background }).then(function(text){ return { text: text, source: text ? 'FLAC LYRICS' : '' }; });
   song.localLyricPromise = lyricPromise.then(function(result){
     result = result || {};
     var text = String(result.text || '').trim();
     song.localLyricText = text;
-    if (!song.localLyricFile && text) song.localLyricTagName = result.source || 'FLAC LYRICS';
-    if (!song.localLyricFile && text && !song.localLyricFileName) song.localLyricFileName = song.localLyricTagName;
-    song.localLyricLoaded = true;
+    if (text) {
+      if (!song.localLyricFile) song.localLyricTagName = result.source || 'FLAC LYRICS';
+      if (!song.localLyricFile && !song.localLyricFileName) song.localLyricFileName = song.localLyricTagName;
+      song.localLyricLoaded = true;
+      song.localLyricLightScanned = false;
+    } else if (opts.background && !song.localLyricFile && canReadEmbeddedFlacLyrics(song)) {
+      song.localLyricLoaded = false;
+      song.localLyricLightScanned = true;
+    } else {
+      song.localLyricLoaded = true;
+    }
     syncLocalSongAssetFields(song);
-    maybeApplyLocalLyricsForSong(song, opts);
+    if (text || !opts.background || song.localLyricLoaded) maybeApplyLocalLyricsForSong(song, opts);
     scheduleLocalAssetUiRefresh(song, 'local-lyric-prefetch');
     return !!text;
   }).catch(function(){
-    song.localLyricLoaded = true;
+    if (opts.background && !song.localLyricFile && canReadEmbeddedFlacLyrics(song)) song.localLyricLightScanned = true;
+    else song.localLyricLoaded = true;
     syncLocalSongAssetFields(song);
     if (opts.applyCurrent && (opts.token == null || opts.token === trackSwitchToken) && isCurrentLocalQueueSong(song)) updateCustomLyricControls();
     return false;
@@ -20789,9 +20828,13 @@ function makeLocalSongFromFile(file, lyricFile, coverFile) {
     localLyricFileName: lyricFile ? (lyricFile.name || '') : '',
     localLyricTagName: '',
     localLyricText: '',
+    localLyricLoaded: false,
+    localLyricLightScanned: false,
     localCoverFile: coverFile || null,
     localCoverFileName: coverFile ? (coverFile.name || '') : '',
     localCoverDataUrl: '',
+    localCoverLoaded: false,
+    localCoverLightScanned: false,
     duration: 0
   });
 }
@@ -20923,10 +20966,12 @@ function embeddedLyricFieldPriority(key, value) {
   if (normalized === 'UNSYNCEDLYRICS' || normalized === 'UNSYNCEDLYRIC') return hasTimeTags ? 80 : 45;
   return hasTimeTags ? 25 : 0;
 }
-async function extractFlacEmbeddedLyricsText(file) {
+async function extractFlacEmbeddedLyricsText(file, opts) {
   if (!file) return '';
-  var limit = Math.min(localFileSize(file) || 0, 32 * 1024 * 1024);
-  var bytes = await readLocalFileBytes(file, 0, limit || 32 * 1024 * 1024);
+  opts = opts || {};
+  var maxScan = opts.light ? LOCAL_ASSET_LIGHT_SCAN_BYTES : 32 * 1024 * 1024;
+  var limit = Math.min(localFileSize(file) || 0, maxScan);
+  var bytes = await readLocalFileBytes(file, 0, limit || maxScan);
   var pos = findFlacMetadataStart(bytes);
   if (pos < 0) return '';
   var best = { priority: 0, text: '' };
@@ -21024,9 +21069,11 @@ async function extractMp3EmbeddedCoverDataUrl(file) {
   }
   return '';
 }
-async function extractFlacEmbeddedCoverDataUrl(file) {
-  var limit = Math.min(localFileSize(file) || 0, 32 * 1024 * 1024);
-  var bytes = await readLocalFileBytes(file, 0, limit || 32 * 1024 * 1024);
+async function extractFlacEmbeddedCoverDataUrl(file, opts) {
+  opts = opts || {};
+  var maxScan = opts.light ? LOCAL_ASSET_LIGHT_SCAN_BYTES : 32 * 1024 * 1024;
+  var limit = Math.min(localFileSize(file) || 0, maxScan);
+  var bytes = await readLocalFileBytes(file, 0, limit || maxScan);
   var pos = asciiFromBytes(bytes, 0, 4) === 'fLaC' ? 4 : -1;
   if (pos < 0) {
     for (var scan = 0; scan < Math.min(bytes.length - 4, 4096); scan++) {
@@ -21056,12 +21103,12 @@ async function extractFlacEmbeddedCoverDataUrl(file) {
   }
   return '';
 }
-async function extractEmbeddedCoverDataUrl(file) {
+async function extractEmbeddedCoverDataUrl(file, opts) {
   if (!file) return '';
   var name = String(file.name || '').toLowerCase();
   try {
     if (/\.mp3$/i.test(name)) return await extractMp3EmbeddedCoverDataUrl(file);
-    if (/\.flac$/i.test(name)) return await extractFlacEmbeddedCoverDataUrl(file);
+    if (/\.flac$/i.test(name)) return await extractFlacEmbeddedCoverDataUrl(file, opts);
   } catch (e) {
     console.warn('[LocalEmbeddedCover]', file && file.name, e);
   }
@@ -21082,21 +21129,36 @@ function ensureLocalCoverForSong(song, opts) {
   opts = opts || {};
   if (!song) return Promise.resolve(false);
   if (song.localCoverDataUrl) {
+    song.localCoverLoaded = true;
     maybeApplyLocalCoverForSong(song, opts);
     return Promise.resolve(true);
   }
+  if (song.localCoverLoaded) return Promise.resolve(false);
   if (song.localCoverPromise) {
     return song.localCoverPromise.then(function(ok){
       maybeApplyLocalCoverForSong(song, opts);
+      if (!ok && !opts.background && !song.localCoverLoaded && !song.localCoverDataUrl) {
+        return ensureLocalCoverForSong(song, opts);
+      }
       return ok;
     });
   }
   song.localCoverLoading = true;
   song.localCoverPromise = (async function(){
     var dataUrl = song.localCoverFile ? await readFileAsDataUrl(song.localCoverFile) : '';
-    if (!dataUrl) dataUrl = await extractEmbeddedCoverDataUrl(song.localFile);
-    if (!dataUrl) return false;
+    if (!dataUrl) dataUrl = await extractEmbeddedCoverDataUrl(song.localFile, { light: !!opts.background });
+    if (!dataUrl) {
+      if (opts.background && !song.localCoverFile && canReadEmbeddedFlacCover(song)) {
+        song.localCoverLightScanned = true;
+      } else {
+        song.localCoverLoaded = true;
+      }
+      syncLocalSongAssetFields(song);
+      return false;
+    }
     song.localCoverDataUrl = dataUrl;
+    song.localCoverLoaded = true;
+    song.localCoverLightScanned = false;
     if (song.type === 'local' && song.customCover && song.customCover === song.localCoverObjectUrl) song.customCover = '';
     syncLocalSongAssetFields(song);
     maybeApplyLocalCoverForSong(song, opts);
@@ -21104,6 +21166,9 @@ function ensureLocalCoverForSong(song, opts) {
     return true;
   })().catch(function(err){
     console.warn('[LocalCover]', song && song.name, err);
+    if (opts.background && !song.localCoverFile && canReadEmbeddedFlacCover(song)) song.localCoverLightScanned = true;
+    else song.localCoverLoaded = true;
+    syncLocalSongAssetFields(song);
     return false;
   }).finally(function(){
     song.localCoverLoading = false;
@@ -21123,6 +21188,7 @@ async function preloadLocalSongAssets(song, opts) {
   if (!song || song.type !== 'local') return false;
   await ensureLocalCoverForSong(song, {
     applyCurrent: !!opts.applyCurrent,
+    background: !!opts.background,
     coverOpts: {
       trackToken: trackSwitchToken,
       deferHeavy: false,
@@ -21130,7 +21196,7 @@ async function preloadLocalSongAssets(song, opts) {
       timeout: 1200
     }
   });
-  await ensureLocalLyricsForSong(song, { applyCurrent: !!opts.applyCurrent });
+  await ensureLocalLyricsForSong(song, { applyCurrent: !!opts.applyCurrent, background: !!opts.background });
   return true;
 }
 function savedLocalLibraryFolderPath() {
