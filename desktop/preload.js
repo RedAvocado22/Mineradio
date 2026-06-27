@@ -1,9 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-function onlineProviderDisabled() {
-  return Promise.resolve({ ok: false, localOnly: true, error: 'LOCAL_ONLY_MODE' });
-}
-
 contextBridge.exposeInMainWorld('desktopWindow', {
   isDesktop: true,
   minimize: () => ipcRenderer.invoke('desktop-window-minimize'),
@@ -15,10 +11,6 @@ contextBridge.exposeInMainWorld('desktopWindow', {
   getTraySettings: () => ipcRenderer.invoke('mineradio-tray-get-settings'),
   setCloseToTray: (enabled) => ipcRenderer.invoke('mineradio-tray-set-close-to-tray', !!enabled),
   setStartupEnabled: (enabled) => ipcRenderer.invoke('mineradio-startup-set-enabled', !!enabled),
-  openNeteaseMusicLogin: onlineProviderDisabled,
-  clearNeteaseMusicLogin: onlineProviderDisabled,
-  openQQMusicLogin: onlineProviderDisabled,
-  clearQQMusicLogin: onlineProviderDisabled,
   openUpdateInstaller: (filePath) => ipcRenderer.invoke('mineradio-open-update-installer', filePath),
   restartApp: () => ipcRenderer.invoke('mineradio-restart-app'),
   configureGlobalHotkeys: (bindings) => ipcRenderer.invoke('mineradio-hotkeys-configure-global', bindings || []),
