@@ -1,5 +1,36 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+const PERSISTENT_UI_STATE_KEYS = [
+  'apex-player-volume',
+  'mineradio-lyric-layout-v1',
+  'mineradio-playback-quality-v1',
+  'mineradio-diy-player-mode-v1',
+  'mineradio-playlist-panel-pinned-v1',
+  'mineradio-user-capsule-auto-hide-v1',
+  'mineradio-fx-fab-auto-hide-v1',
+  'mineradio-controls-auto-hide-v1',
+  'mineradio-free-camera-v1',
+  'mineradio-local-library-folder-v1',
+  'mineradio-playback-session-v1',
+  'mineradio-user-fx-archives-v1',
+  'mineradio-hotkey-settings-v1',
+  'mineradio-visual-guide-seen-v2',
+  'mineradio-upload-tip-seen',
+];
+
+function restorePersistentUiState() {
+  try {
+    const values = ipcRenderer.sendSync('mineradio-ui-state-read-sync') || {};
+    PERSISTENT_UI_STATE_KEYS.forEach((key) => {
+      if (typeof values[key] !== 'string') return;
+      if (window.localStorage.getItem(key) != null) return;
+      window.localStorage.setItem(key, values[key]);
+    });
+  } catch (_e) {}
+}
+
+restorePersistentUiState();
+
 contextBridge.exposeInMainWorld('desktopWindow', {
   isDesktop: true,
   minimize: () => ipcRenderer.invoke('desktop-window-minimize'),
@@ -16,6 +47,7 @@ contextBridge.exposeInMainWorld('desktopWindow', {
   configureGlobalHotkeys: (bindings) => ipcRenderer.invoke('mineradio-hotkeys-configure-global', bindings || []),
   exportJsonFile: (payload) => ipcRenderer.invoke('mineradio-export-json-file', payload || {}),
   importJsonFile: () => ipcRenderer.invoke('mineradio-import-json-file'),
+  backupUiState: (patch) => ipcRenderer.invoke('mineradio-ui-state-write', patch || {}),
   chooseLocalMusicFolder: () => ipcRenderer.invoke('mineradio-local-music-choose-folder'),
   scanLocalMusicFolder: (folderPath) => ipcRenderer.invoke('mineradio-local-music-scan-folder', folderPath),
   refreshLocalMusicFiles: (folderPath, files) => ipcRenderer.invoke('mineradio-local-music-refresh-entries', folderPath, files || []),

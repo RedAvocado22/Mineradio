@@ -40,6 +40,24 @@ const APP_USER_MODEL_ID = 'com.mineradio.desktop';
 const APP_ICON_ICO = path.join(__dirname, '..', 'build', 'icon.ico');
 const LOCAL_FILE_TOKEN = crypto.randomBytes(16).toString('hex');
 const DESKTOP_SHELL_SETTINGS_FILE = 'desktop-shell-settings.json';
+const DESKTOP_UI_STATE_FILE = 'desktop-ui-state.json';
+const DESKTOP_UI_STATE_KEYS = new Set([
+  'apex-player-volume',
+  'mineradio-lyric-layout-v1',
+  'mineradio-playback-quality-v1',
+  'mineradio-diy-player-mode-v1',
+  'mineradio-playlist-panel-pinned-v1',
+  'mineradio-user-capsule-auto-hide-v1',
+  'mineradio-fx-fab-auto-hide-v1',
+  'mineradio-controls-auto-hide-v1',
+  'mineradio-free-camera-v1',
+  'mineradio-local-library-folder-v1',
+  'mineradio-playback-session-v1',
+  'mineradio-user-fx-archives-v1',
+  'mineradio-hotkey-settings-v1',
+  'mineradio-visual-guide-seen-v2',
+  'mineradio-upload-tip-seen',
+]);
 
 const CHROMIUM_PERFORMANCE_SWITCHES = [
   ['autoplay-policy', 'no-user-gesture-required'],
@@ -412,6 +430,45 @@ function readDesktopShellSettings() {
 function writeDesktopShellSettings(patch) {
   const file = path.join(app.getPath('userData'), DESKTOP_SHELL_SETTINGS_FILE);
   const next = { ...readDesktopShellSettings(), ...(patch || {}) };
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(next, null, 2), 'utf8');
+  return next;
+}
+
+function desktopUiStatePath() {
+  return path.join(app.getPath('userData'), DESKTOP_UI_STATE_FILE);
+}
+
+function readDesktopUiState() {
+  try {
+    const file = desktopUiStatePath();
+    if (!fs.existsSync(file)) return { schema: 1, values: {}, updatedAt: 0 };
+    const data = JSON.parse(fs.readFileSync(file, 'utf8')) || {};
+    return {
+      schema: 1,
+      values: data.values && typeof data.values === 'object' ? data.values : {},
+      updatedAt: Number(data.updatedAt) || 0,
+    };
+  } catch (_e) {
+    return { schema: 1, values: {}, updatedAt: 0 };
+  }
+}
+
+function writeDesktopUiStatePatch(patch) {
+  const current = readDesktopUiState();
+  const values = { ...(current.values || {}) };
+  Object.entries(patch || {}).forEach(([key, value]) => {
+    if (!DESKTOP_UI_STATE_KEYS.has(key)) return;
+    if (value == null) {
+      delete values[key];
+      return;
+    }
+    const text = String(value);
+    if (text.length > 2 * 1024 * 1024) return;
+    values[key] = text;
+  });
+  const next = { schema: 1, updatedAt: Date.now(), values };
+  const file = desktopUiStatePath();
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(next, null, 2), 'utf8');
   return next;
@@ -1108,6 +1165,19 @@ ipcMain.handle('mineradio-import-json-file', async (event) => {
     return { ok: true, filePath, text };
   } catch (e) {
     return { ok: false, error: e.message || 'IMPORT_FAILED' };
+  }
+});
+
+ipcMain.on('mineradio-ui-state-read-sync', (event) => {
+  event.returnValue = readDesktopUiState().values || {};
+});
+
+ipcMain.handle('mineradio-ui-state-write', async (_event, patch) => {
+  try {
+    const state = writeDesktopUiStatePatch(patch || {});
+    return { ok: true, updatedAt: state.updatedAt };
+  } catch (e) {
+    return { ok: false, error: e.message || 'UI_STATE_WRITE_FAILED' };
   }
 });
 

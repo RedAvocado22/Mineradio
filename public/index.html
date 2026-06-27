@@ -2733,6 +2733,59 @@ var LOCAL_LIBRARY_FOLDER_STORE_KEY = 'mineradio-local-library-folder-v1';
 var LOCAL_LIBRARY_SNAPSHOT_STORE_KEY = 'mineradio-local-library-snapshot-v1';
 var LOCAL_LIBRARY_INDEX_STORE_KEY = 'mineradio-local-library-index-v1';
 var PLAYBACK_SESSION_STORE_KEY = 'mineradio-playback-session-v1';
+var PERSISTENT_UI_STATE_KEYS = [
+  'apex-player-volume',
+  LYRIC_LAYOUT_STORE_KEY,
+  PLAYBACK_QUALITY_STORE_KEY,
+  DIY_MODE_STORE_KEY,
+  PLAYLIST_PANEL_PIN_STORE_KEY,
+  USER_CAPSULE_AUTO_HIDE_STORE_KEY,
+  FX_FAB_AUTO_HIDE_STORE_KEY,
+  CONTROLS_AUTO_HIDE_STORE_KEY,
+  FREE_CAMERA_STORE_KEY,
+  LOCAL_LIBRARY_FOLDER_STORE_KEY,
+  PLAYBACK_SESSION_STORE_KEY,
+  'mineradio-user-fx-archives-v1',
+  HOTKEY_SETTINGS_STORE_KEY,
+  VISUAL_GUIDE_SEEN_STORE_KEY,
+  UPLOAD_TIP_STORE_KEY
+];
+function backupPersistentUiState(patch) {
+  try {
+    var api = window.desktopWindow;
+    if (api && typeof api.backupUiState === 'function') api.backupUiState(patch || {});
+  } catch (e) {}
+}
+function setPersistentLocalStorageItem(key, value) {
+  var text = String(value == null ? '' : value);
+  try { localStorage.setItem(key, text); } catch (e) {}
+  var patch = {};
+  patch[key] = text;
+  backupPersistentUiState(patch);
+}
+function removePersistentLocalStorageItem(key) {
+  try { localStorage.removeItem(key); } catch (e) {}
+  var patch = {};
+  patch[key] = null;
+  backupPersistentUiState(patch);
+}
+function syncPersistentUiStateBackup() {
+  var patch = {};
+  var hasAny = false;
+  try {
+    PERSISTENT_UI_STATE_KEYS.forEach(function(key){
+      var value = localStorage.getItem(key);
+      if (value == null) return;
+      patch[key] = value;
+      hasAny = true;
+    });
+  } catch (e) {}
+  if (hasAny) backupPersistentUiState(patch);
+}
+function hasSavedLyricLayout() {
+  try { return localStorage.getItem(LYRIC_LAYOUT_STORE_KEY) != null; } catch (e) { return false; }
+}
+syncPersistentUiStateBackup();
 var LOCAL_ASSET_CACHE_DB_NAME = 'mineradio-local-assets-v1';
 var LOCAL_ASSET_CACHE_STORE = 'assets';
 var LOCAL_ASSET_CACHE_SCHEMA = 1;
@@ -2885,7 +2938,7 @@ function readDiyModePreference() {
   try { return localStorage.getItem(DIY_MODE_STORE_KEY) === '1'; } catch (e) { return false; }
 }
 function saveDiyModePreference(on) {
-  try { localStorage.setItem(DIY_MODE_STORE_KEY, on ? '1' : '0'); } catch (e) {}
+  setPersistentLocalStorageItem(DIY_MODE_STORE_KEY, on ? '1' : '0');
 }
 function readBooleanPreference(key, fallback) {
   try {
@@ -2897,7 +2950,7 @@ function readBooleanPreference(key, fallback) {
   }
 }
 function saveBooleanPreference(key, on) {
-  try { localStorage.setItem(key, on ? '1' : '0'); } catch (e) {}
+  setPersistentLocalStorageItem(key, on ? '1' : '0');
 }
 function applyUserCapsuleAutoHideState() {
   document.body.classList.toggle('user-capsule-auto-hide', !!userCapsuleAutoHide);
@@ -3886,7 +3939,7 @@ var freeCameraDeferredSaveTimer = 0;
 function saveFreeCameraState() {
   if (!freeCamera) return;
   try {
-    localStorage.setItem(FREE_CAMERA_STORE_KEY, JSON.stringify({
+    setPersistentLocalStorageItem(FREE_CAMERA_STORE_KEY, JSON.stringify({
       locked: !!freeCamera.locked,
       active: !!freeCamera.active,
       position: { x: freeCamera.position.x, y: freeCamera.position.y, z: freeCamera.position.z },
@@ -7662,7 +7715,7 @@ function saveLyricLayout() {
     var presetForSave = startupVisualPreviewActive && !playing && currentIdx < 0
       ? playbackVisualPreset
       : clampRange(Number(fx.preset) || 0, 0, presetMeta.length - 1);
-    localStorage.setItem(LYRIC_LAYOUT_STORE_KEY, JSON.stringify({
+    var layoutPayload = {
       visualPresetSchema: VISUAL_PRESET_SCHEMA,
       desktopLyricsSchema: 'desktop-lyrics-v3',
       preset: presetForSave,
@@ -7744,7 +7797,8 @@ function saveLyricLayout() {
       shelfBgOpacity: clampRange(fx.shelfBgOpacity == null ? fxDefaults.shelfBgOpacity : Number(fx.shelfBgOpacity), 0.25, 0.98),
       shelfAccentColor: normalizeHexColor(fx.shelfAccentColor || fxDefaults.shelfAccentColor, fxDefaults.shelfAccentColor),
       cam: /^(off|gesture)$/.test(String(fx.cam || '')) ? fx.cam : fxDefaults.cam
-    }));
+    };
+    setPersistentLocalStorageItem(LYRIC_LAYOUT_STORE_KEY, JSON.stringify(layoutPayload));
   } catch (e) {}
 }
 function normalizeHexColor(value, fallback) {
@@ -15529,7 +15583,7 @@ function readPlaybackQualityPreference() {
   }
 }
 function savePlaybackQualityPreference() {
-  try { localStorage.setItem(PLAYBACK_QUALITY_STORE_KEY, playbackQuality); } catch (e) {}
+  setPersistentLocalStorageItem(PLAYBACK_QUALITY_STORE_KEY, playbackQuality);
 }
 function updatePlaybackQualityUi() {
   var label = document.getElementById('quality-btn-label');
@@ -16080,6 +16134,11 @@ function switchPlaybackVisualToEmily() {
 }
 function applyStartupStarfieldPreset() {
   if (playing || currentIdx >= 0) return;
+  if (hasSavedLyricLayout()) {
+    startupVisualPreviewActive = false;
+    if (typeof syncFxUniforms === 'function') syncFxUniforms();
+    return;
+  }
   startupVisualPreviewActive = true;
   if (typeof setPreset === 'function' && fx.preset !== 5) {
     setPreset(5, { silent: true, preserveCamera: false, skipTransition: true, noSave: true });
@@ -17695,7 +17754,7 @@ function setVolume(value, silent) {
   var next = Math.max(0, Math.min(1, Number(value) || 0));
   targetVolume = next;
   if (next > 0.01) lastNonZeroVolume = next;
-  try { localStorage.setItem('apex-player-volume', String(next)); } catch (e) {}
+  setPersistentLocalStorageItem('apex-player-volume', String(next));
   applyVolumeToAudio();
   updateVolumeUi();
   if (!silent) showToast('音量 ' + Math.round(next * 100) + '%');
@@ -17805,7 +17864,7 @@ function savePlaybackSession(force) {
     var folderPath = savedLocalLibraryFolderPath();
     var songKey = localPlaybackSessionSongKey(song);
     if (!folderPath || !songKey) return;
-    localStorage.setItem(PLAYBACK_SESSION_STORE_KEY, JSON.stringify({
+    setPersistentLocalStorageItem(PLAYBACK_SESSION_STORE_KEY, JSON.stringify({
       schema: 1,
       type: 'local-folder',
       folderPath: folderPath,
@@ -17824,7 +17883,7 @@ function savePlaybackSession(force) {
  * @returns {void}
  */
 function clearPlaybackSession() {
-  try { localStorage.removeItem(PLAYBACK_SESSION_STORE_KEY); } catch (e) {}
+  removePersistentLocalStorageItem(PLAYBACK_SESSION_STORE_KEY);
 }
 
 /**
@@ -20504,13 +20563,11 @@ function savedLocalLibraryFolderPath() {
   try { return localStorage.getItem(LOCAL_LIBRARY_FOLDER_STORE_KEY) || ''; } catch (e) { return ''; }
 }
 function saveLocalLibraryFolderPath(folderPath) {
-  try {
-    if (folderPath) localStorage.setItem(LOCAL_LIBRARY_FOLDER_STORE_KEY, folderPath);
-  } catch (e) {}
+  if (folderPath) setPersistentLocalStorageItem(LOCAL_LIBRARY_FOLDER_STORE_KEY, folderPath);
 }
 function clearSavedLocalLibraryFolderPath() {
   try {
-    localStorage.removeItem(LOCAL_LIBRARY_FOLDER_STORE_KEY);
+    removePersistentLocalStorageItem(LOCAL_LIBRARY_FOLDER_STORE_KEY);
     localStorage.removeItem(LOCAL_LIBRARY_SNAPSHOT_STORE_KEY);
     localStorage.removeItem(LOCAL_LIBRARY_INDEX_STORE_KEY);
   } catch (e) {}
@@ -21102,7 +21159,7 @@ function readUserFxArchives() {
 }
 function saveUserFxArchives() {
   try {
-    localStorage.setItem(USER_FX_ARCHIVE_STORE_KEY, JSON.stringify(userFxArchives));
+    setPersistentLocalStorageItem(USER_FX_ARCHIVE_STORE_KEY, JSON.stringify(userFxArchives));
   } catch (e) {
     showToast('用户存档保存失败，本地存储空间可能不足');
   }
@@ -22694,7 +22751,7 @@ function readHotkeySettings() {
   }
 }
 function saveHotkeySettings() {
-  try { localStorage.setItem(HOTKEY_SETTINGS_STORE_KEY, JSON.stringify(hotkeySettings || getHotkeyDefaults())); } catch (e) {}
+  setPersistentLocalStorageItem(HOTKEY_SETTINGS_STORE_KEY, JSON.stringify(hotkeySettings || getHotkeyDefaults()));
 }
 function hotkeyActionMeta(actionKey) {
   for (var i = 0; i < HOTKEY_ACTIONS.length; i++) {
@@ -24894,7 +24951,7 @@ function visualGuideWasSeen() {
   try { return localStorage.getItem(VISUAL_GUIDE_SEEN_STORE_KEY) === '1'; } catch (e) { return true; }
 }
 function markVisualGuideSeen() {
-  try { localStorage.setItem(VISUAL_GUIDE_SEEN_STORE_KEY, '1'); } catch (e) {}
+  setPersistentLocalStorageItem(VISUAL_GUIDE_SEEN_STORE_KEY, '1');
 }
 function maybeRunStartupVisualGuide(source) {
   if (visualGuideWasSeen() || visualGuideActive || immersiveMode || playing) return false;
@@ -25657,7 +25714,7 @@ function uploadTipWasSeen() {
   try { return localStorage.getItem(UPLOAD_TIP_STORE_KEY) === '1'; } catch (e) { return true; }
 }
 function markUploadTipSeen() {
-  try { localStorage.setItem(UPLOAD_TIP_STORE_KEY, '1'); } catch (e) {}
+  setPersistentLocalStorageItem(UPLOAD_TIP_STORE_KEY, '1');
 }
 function closeUploadTip(manual) {
   var tip = document.getElementById('upload-tip');
