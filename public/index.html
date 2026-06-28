@@ -621,7 +621,7 @@ body.home-controls-locked #bottom-bar{opacity:0!important;pointer-events:none!im
 .quality-option:hover{transform:translateY(-1px);color:#fff;background:rgba(255,255,255,.09)}
 .quality-option.active{color:#eaf2ff;border-color:rgba(157,184,207,.46);background:rgba(157,184,207,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 .quality-option.locked{opacity:.42;cursor:not-allowed;transform:none!important}
-.quality-option.locked small::after{content:' · 本地原始音质';color:rgba(244,210,138,.88)}
+.quality-option.locked small::after{content:' · Original Local Quality';color:rgba(244,210,138,.88)}
 #volume-slider{width:92px;accent-color:var(--fc-accent);cursor:pointer}
 #volume-value{width:34px;text-align:right;font-size:10px;color:rgba(255,255,255,.52);font-variant-numeric:tabular-nums}
 .mini-queue-popover{position:absolute;left:50%;bottom:calc(100% + 14px);width:min(420px,calc(100vw - 32px));max-height:min(420px,calc(100vh - 170px));padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,.075);background:linear-gradient(145deg,rgba(18,18,23,.82),rgba(8,8,12,.88));backdrop-filter:blur(30px) saturate(1.08);-webkit-backdrop-filter:blur(30px) saturate(1.08);box-shadow:0 22px 70px rgba(0,0,0,.46),inset 0 1px 0 rgba(255,255,255,.065);opacity:0;pointer-events:none;transform:translateX(-50%) translateY(12px) scale(.98);transition:opacity .22s,transform .22s;z-index:7;overflow:hidden}
@@ -2149,7 +2149,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
       <div class="lyric-color-grid" id="lyric-color-grid"></div>
       <div class="lyric-color-row">
         <input id="lyric-color-picker" class="lyric-color-picker" type="color" value="#a9b8c8" title="Color Wheel">
-        <div class="lyric-color-value" id="lyric-color-value">封面取色</div>
+        <div class="lyric-color-value" id="lyric-color-value">From Cover</div>
         <button class="fx-mini-btn ghost" id="lyric-auto-btn" type="button" onclick="setLyricColorAuto()">Cover</button>
       </div>
       <div class="fx-section-label">Highlight Color</div>
@@ -2221,8 +2221,8 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
       </div>
       <div class="fx-section-label">Desktop / Wallpaper</div>
       <div class="fx-toggle-grid">
-        <div class="fx-toggle" id="t-closeToTray" onclick="toggleDesktopShellSetting('closeToTray')" title="点击窗口关闭按钮时隐藏到系统托盘"><span>关闭到托盘</span><span class="dot"></span></div>
-        <div class="fx-toggle" id="t-startupLaunch" onclick="toggleDesktopShellSetting('startupLaunch')" title="登录 Windows 后自动启动 Mineradio"><span>开机启动</span><span class="dot"></span></div>
+        <div class="fx-toggle" id="t-closeToTray" onclick="toggleDesktopShellSetting('closeToTray')" title="Clicking the close button minimizes to system tray"><span>Minimize to Tray</span><span class="dot"></span></div>
+        <div class="fx-toggle" id="t-startupLaunch" onclick="toggleDesktopShellSetting('startupLaunch')" title="Auto-start Mineradio after Windows login"><span>Launch at Startup</span><span class="dot"></span></div>
       </div>
       <div class="fx-slider"><label>Desktop Lyrics Size</label><input id="fx-desktoplyricssize" type="range" min="0.72" max="1.55" step="0.01"><output></output></div>
       <div class="fx-slider"><label>Desktop Lyrics Opacity</label><input id="fx-desktoplyricsopacity" type="range" min="0.28" max="1" step="0.01"><output></output></div>
@@ -2235,15 +2235,15 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
         <button data-desktop-lyrics-fps="120">120</button>
         <button data-desktop-lyrics-fps="0">Unlimited</button>
       </div>
-      <div class="fx-section-label">桌面歌词布局</div>
+      <div class="fx-section-label">Desktop Lyrics Layout</div>
       <div class="fx-seg" id="desktop-lyrics-rows-seg">
-        <button data-desktop-lyrics-rows="single">单行</button>
-        <button data-desktop-lyrics-rows="double">双行</button>
+        <button data-desktop-lyrics-rows="single">Single Line</button>
+        <button data-desktop-lyrics-rows="double">Double Line</button>
       </div>
       <div class="fx-seg" id="desktop-lyrics-align-seg">
-        <button data-desktop-lyrics-align="left">左对齐</button>
-        <button data-desktop-lyrics-align="center">居中</button>
-        <button data-desktop-lyrics-align="right">右对齐</button>
+        <button data-desktop-lyrics-align="left">Left</button>
+        <button data-desktop-lyrics-align="center">Center</button>
+        <button data-desktop-lyrics-align="right">Right</button>
       </div>
       <div class="fx-slider dev-locked"><label>Wallpaper Opacity</label><input id="fx-wallpaperopacity" type="range" min="0.35" max="1" step="0.01" disabled><output></output></div>
     </div>
@@ -2273,7 +2273,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
       </div>
       <div class="fx-section-label">Rack Content</div>
       <div class="fx-toggle-grid">
-        <div class="fx-toggle" id="t-shelfMergeCollections" onclick="toggleFx('shelfMergeCollections')" title="开启后我的歌单与收藏歌单按一条线连续滚动"><span>合并收藏歌单</span><span class="dot"></span></div>
+        <div class="fx-toggle" id="t-shelfMergeCollections" onclick="toggleFx('shelfMergeCollections')" title="When enabled, playlists and favorites scroll continuously in one line"><span>Merge Favorite Playlists</span><span class="dot"></span></div>
       </div>
       <div class="fx-section-label">Rack Appearance</div>
       <div class="lyric-color-row">
@@ -2344,7 +2344,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
   </div>
   <div class="panel-tabs">
     <button id="tab-queue" class="panel-tab active" onclick="switchPlaylistTab('queue')">Current Queue</button>
-    <button id="tab-pl" class="panel-tab" onclick="switchPlaylistTab('playlists')">本地库</button>
+    <button id="tab-pl" class="panel-tab" onclick="switchPlaylistTab('playlists')">Local Library</button>
   </div>
   <div id="queue-pane">
     <div class="queue-toolbar">
@@ -2358,7 +2358,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
   </div>
   <div id="pl-pane" style="display:none">
     <div class="queue-toolbar">
-      <div class="queue-chip">本地音乐文件夹</div>
+      <div class="queue-chip">Local Music Folder</div>
       <button class="fx-mini-btn ghost" onclick="openLocalFolderImport()" style="height:26px;padding:0 10px;font-size:11px">Import</button>
     </div>
     <div id="pl-list" style="margin-top:6px"></div>
@@ -2369,7 +2369,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
 <div id="trial-banner">
   <svg class="ic" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
   <span id="trial-text">Preview only</span>
-  <span id="trial-login-btn" class="login-link" onclick="openLocalFolderImport()">导入本地音乐</span>
+  <span id="trial-login-btn" class="login-link" onclick="openLocalFolderImport()">Import Local Music</span>
   <span class="close" onclick="document.getElementById('trial-banner').classList.remove('show')">×</span>
 </div>
 
@@ -2465,7 +2465,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
     <div class="mini-queue-head">
       <div>
         <div class="mini-queue-title">Current Queue</div>
-        <div id="mini-queue-count" class="mini-queue-count">0 首</div>
+        <div id="mini-queue-count" class="mini-queue-count">0 tracks</div>
       </div>
       <button class="fx-mini-btn ghost" onclick="closeMiniQueue()" title="Close" style="height:26px;padding:0 9px;font-size:13px">×</button>
     </div>
@@ -2502,7 +2502,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
     <button id="mini-queue-btn" class="ctrl-btn" onclick="toggleMiniQueue(event)" title="Current Queue"><svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg></button>
     </div>
     <div class="control-cluster modes">
-    <button class="ctrl-btn lyrics-toggle-btn" onclick="toggleLyricsPanel()" title="Lyrics"><span class="lyrics-word-icon">词</span></button>
+    <button class="ctrl-btn lyrics-toggle-btn" onclick="toggleLyricsPanel()" title="Lyrics"><span class="lyrics-word-icon">LRC</span></button>
     <div id="volume-control" class="volume-control">
       <button id="volume-btn" class="ctrl-btn" onclick="toggleVolumePanel(event)" title="Volume / Mute"><svg id="volume-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15 9.5a4 4 0 0 1 0 5"/></svg></button>
       <div class="volume-popover" onclick="event.stopPropagation()">
@@ -2651,7 +2651,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
 <div id="toast"></div>
 <div id="source-fallback-notice" aria-live="polite">
   <div class="source-fallback-head">
-    <div id="source-fallback-title" class="source-fallback-title">自动换源</div>
+    <div id="source-fallback-title" class="source-fallback-title">Auto Switch Source</div>
     <button class="source-fallback-close" type="button" onclick="closeSourceFallbackNotice()">×</button>
   </div>
   <div id="source-fallback-body" class="source-fallback-body"></div>
@@ -2664,7 +2664,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
     <div id="visual-guide-kicker" class="visual-guide-kicker">Guide</div>
     <div id="visual-guide-title" class="visual-guide-title"></div>
     <div id="visual-guide-body" class="visual-guide-body"></div>
-    <div id="visual-guide-hint" class="visual-guide-hint">点击空白处也可以继续</div>
+    <div id="visual-guide-hint" class="visual-guide-hint">Click anywhere to continue</div>
     <div class="visual-guide-actions">
       <button type="button" onclick="closeVisualGuide(true)">Skip</button>
       <div id="visual-guide-progress" class="visual-guide-progress"></div>
@@ -2705,7 +2705,7 @@ var lyricsLines = [], lyricsVisible = false, lyricsHasNativeKaraoke = false, lyr
 var playlist = [], playQueue = [], localLibrarySongs = [], currentIdx = -1, playing = false, playToggleBusy = false;
 var localLibraryPassiveQueue = false;
 var searchMode = 'song';
-var loginStatus = { loggedIn: false, vipType: 0, vipLevel: 'none', isVip: false, isSvip: false, vipLabel: '本地模式' };
+var loginStatus = { loggedIn: false, vipType: 0, vipLevel: 'none', isVip: false, isSvip: false, vipLabel: 'Local Mode' };
 var loginStatusChecked = false, loginStatusCheckFailed = false;
 var volumeTween = null, trackSwitchToken = 0;
 var audioFadeTimer = null, audioElementFadeFrame = 0, audioFadeSerial = 0;
@@ -2922,11 +2922,11 @@ var updatePreviewState = {
   message: '',
   restartRequired: false,
   patchFallbackTried: false,
-  hero: '当前版本，更新检测已就绪。',
+  hero: 'Current version, update check ready.',
   notes: [
-    '安装包文字对比修复',
-    '安装目录可自由选择',
-    '单实例与快捷方式修复'
+    'Installer text diff fix',
+    'Installation directory now freely selectable',
+    'Single instance and shortcut fix'
   ]
 };
 function readSavedVolume() {
@@ -3264,7 +3264,7 @@ function maybeAnnounceDjMode() {
   var now = performance.now();
   if (now - djMode.lastNoticeAt > 8000) {
     djMode.lastNoticeAt = now;
-    showToast('DJ Mode · 离线锁拍');
+    showToast('DJ Mode · Offline Beat Lock');
   }
 }
 
@@ -3344,7 +3344,7 @@ var fxDefaults = {
   liveBackgroundKeep: false,
   cam: 'off',
 };
-var PACKAGED_DEFAULT_USER_FX_ARCHIVE_NAME = '默认测试';
+var PACKAGED_DEFAULT_USER_FX_ARCHIVE_NAME = 'Default';
 var PACKAGED_DEFAULT_USER_FX_ARCHIVE_EXPORTED_AT = 1782276031784;
 var PACKAGED_DEFAULT_USER_FX_ARCHIVE_SAVED_AT = 1782273019045;
 var PACKAGED_DEFAULT_FX_SNAPSHOT = Object.freeze({
@@ -8089,8 +8089,8 @@ function normalizeCustomBackgroundMedia(value) {
 }
 function customBackgroundMediaLabel(media) {
   media = normalizeCustomBackgroundMedia(media);
-  if (!media) return '未设置';
-  return media.type === 'video' ? '视频已设置' : '图片已设置';
+  if (!media) return 'Not set';
+  return media.type === 'video' ? 'Video set' : 'Image set';
 }
 var CUSTOM_BG_DB_NAME = 'mineradio-custom-background-v1';
 var CUSTOM_BG_STORE = 'media';
@@ -8368,14 +8368,14 @@ function scheduleLocalAssetCacheWrite(song) {
 }
 var colorLabState = { picker: null, id: '', h: 0, s: 1, v: 1, dragging: false };
 var COLOR_LAB_PRESETS = [
-  { name: '极黑', color: '#000000' },
-  { name: '极白', color: '#ffffff' },
-  { name: '克莱因蓝', color: '#002fa7' },
-  { name: '法拉利红', color: '#f00000' },
-  { name: '香槟金', color: '#c8a96a' },
-  { name: '孔雀绿', color: '#006b5b' },
-  { name: '午夜紫', color: '#2b164f' },
-  { name: '银雾', color: '#d9dde2' }
+  { name: 'Pitch Black', color: '#000000' },
+  { name: 'Pure White', color: '#ffffff' },
+  { name: 'Klein Blue', color: '#002fa7' },
+  { name: 'Ferrari Red', color: '#f00000' },
+  { name: 'Champagne Gold', color: '#c8a96a' },
+  { name: 'Peacock Green', color: '#006b5b' },
+  { name: 'Midnight Purple', color: '#2b164f' },
+  { name: 'Silver Mist', color: '#d9dde2' }
 ];
 function rgbToHsv(r, g, b) {
   r /= 255; g /= 255; b /= 255;
@@ -9899,7 +9899,7 @@ async function ensureAIDepthPipeline() {
   if (aiDepthBusy) return null;
   aiDepthBusy = true;
   try {
-    showAIDepthChip('加载 AI 深度模型 (首次需下载 50MB)…');
+    showAIDepthChip('Loading AI depth model (first time ~50MB download)…');
     var mod = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
     mod.env.allowLocalModels = false;
     if (mod.env.backends && mod.env.backends.onnx && mod.env.backends.onnx.wasm) mod.env.backends.onnx.wasm.numThreads = 1;
@@ -9931,7 +9931,7 @@ function makeAIDepthInputCanvas(srcCanvas) {
 async function estimateAIDepth(srcCanvas, token) {
   if (!fx.aiDepth) return null;
   if (performance.now() < aiDepthFailUntil) return null;
-  showAIDepthChip('后台增强封面深度…');
+  showAIDepthChip('Enhancing cover depth in background…');
   try {
     var pipe = await ensureAIDepthPipeline();
     if (!pipe) { hideAIDepthChip(); return null; }
@@ -10437,7 +10437,7 @@ function getMusicTempoWorkerUrl() {
 async function analyzeMusicTempoInWorker(buffer, token) {
   if (typeof Worker === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined') return null;
   try {
-    showBeatChip('后台锁定电影主拍…');
+    showBeatChip('Locking cinematic beats in background…');
     await yieldToIdle(isHiddenForBackgroundOptimization() ? 20 : 180);
     if (token !== beatMapToken) return null;
     var channels = buffer.numberOfChannels;
@@ -10736,11 +10736,11 @@ async function analyzeAudioBeats(audioUrl, durationSec, token, options) {
   var softGrooveAnalysis = !!(analysisProfile && analysisProfile.softGroove);
   try {
     beatMapBusy = true;
-    if (options.prefetch) showBeatChip('预热下一首节奏…');
-    else if (options.background) showBeatChip('后台缓冲节奏…');
+    if (options.prefetch) showBeatChip('Pre-warming next track beats…');
+    else if (options.background) showBeatChip('Buffering beats in background…');
     await yieldToIdle(beatAnalysisYieldMs(options, 140, 760));
     if (token !== beatMapToken) { hideBeatChip(); beatMapBusy = false; return null; }
-    showBeatChip('正在分析节奏…');
+    showBeatChip('Analyzing beats…');
     var resp = await fetch(audioUrl);
     if (token !== beatMapToken) { hideBeatChip(); return null; }
     var ab = await resp.arrayBuffer();
@@ -11480,7 +11480,7 @@ async function analyzeAudioBeats(audioUrl, durationSec, token, options) {
     await yieldToPaint();
     if (token !== beatMapToken) { hideBeatChip(); return null; }
     if (options.prefetch) hideBeatChip();
-    else showBeatChip('节奏缓冲中…');
+    else showBeatChip('Buffering beats…');
     return { kicks: kicks, beats: beats, pulseBeats: pulseBeats, cameraBeats: cameraBeats, gridStep: gridStep, tempoSource: musicTempoBeats.length >= 4 ? 'music-tempo' : 'local', analysisProfile: analysisProfile.id || 'default', duration: buffer.duration, visualBeatCount: visualBeatCount, analyzedAt: Date.now() };
   } catch (e) {
     console.warn('beat analysis failed:', e);
@@ -11899,7 +11899,7 @@ async function buildPodcastDjLowOnlyBeatMap(buffer, token) {
 async function analyzePodcastDjBeats(audioUrl, token, durationSec) {
   try {
     djBeatMapBusy = true;
-    showBeatChip('DJ 离线锁拍…');
+    showBeatChip('DJ offline beat lock…');
     await yieldToIdle(520);
     if (token !== djBeatMapToken || !djMode.active) { hideBeatChip(); return null; }
     durationSec = Math.max(0, Number(durationSec) || 0);
@@ -11912,7 +11912,7 @@ async function analyzePodcastDjBeats(audioUrl, token, durationSec) {
     var ab = await resp.arrayBuffer();
     if (token !== djBeatMapToken || !djMode.active) { hideBeatChip(); return null; }
 
-    showBeatChip('DJ 解码音频…');
+    showBeatChip('DJ decoding audio…');
     var TmpCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
     var DecodeCtx = window.AudioContext || window.webkitAudioContext;
     if (!DecodeCtx) { hideBeatChip(); return null; }
@@ -11927,7 +11927,7 @@ async function analyzePodcastDjBeats(audioUrl, token, durationSec) {
 
     var sr = buffer.sampleRate;
     async function renderDjBand(hpFreq, lpFreq, label) {
-      showBeatChip('DJ 分离' + label + '…');
+      showBeatChip('DJ isolating ' + label + '…');
       var off = new TmpCtx(1, buffer.length, sr);
       var src = off.createBufferSource();
       src.buffer = buffer;
@@ -11956,17 +11956,17 @@ async function analyzePodcastDjBeats(audioUrl, token, durationSec) {
       return rendered.getChannelData(0);
     }
 
-    var lowPcm = await renderDjBand(34, 170, '低频');
+    var lowPcm = await renderDjBand(34, 170, 'Low');
     if (!lowPcm) { hideBeatChip(); return null; }
-    var bodyPcm = await renderDjBand(150, 560, '鼓身');
+    var bodyPcm = await renderDjBand(150, 560, 'Body');
     if (!bodyPcm) { hideBeatChip(); return null; }
-    var snapPcm = await renderDjBand(1700, 9200, '高频');
+    var snapPcm = await renderDjBand(1700, 9200, 'High');
     if (!snapPcm) { hideBeatChip(); return null; }
 
     var hopSec = 0.012;
     var hopSize = Math.max(256, Math.floor(sr * hopSec));
     async function makeEnergy(pcm, label) {
-      showBeatChip('DJ 读取' + label + '…');
+      showBeatChip('DJ reading ' + label + '…');
       var frames = Math.floor(pcm.length / hopSize);
       var out = new Float32Array(frames);
       for (var f = 0; f < frames; f++) {
@@ -11985,9 +11985,9 @@ async function analyzePodcastDjBeats(audioUrl, token, durationSec) {
       return out;
     }
 
-    var lowEnergy = await makeEnergy(lowPcm, '低频');
-    var bodyEnergy = await makeEnergy(bodyPcm, '鼓身');
-    var snapEnergy = await makeEnergy(snapPcm, '高频');
+    var lowEnergy = await makeEnergy(lowPcm, 'Low');
+    var bodyEnergy = await makeEnergy(bodyPcm, 'Body');
+    var snapEnergy = await makeEnergy(snapPcm, 'High');
     if (!lowEnergy || !bodyEnergy || !snapEnergy || token !== djBeatMapToken || !djMode.active) { hideBeatChip(); return null; }
 
     var nFrames = Math.min(lowEnergy.length, bodyEnergy.length, snapEnergy.length);
@@ -12009,7 +12009,7 @@ async function analyzePodcastDjBeats(audioUrl, token, durationSec) {
     var bodyRef = Math.max(0.0008, percentile(bodyEnergy, 0.84));
     var snapRef = Math.max(0.0008, percentile(snapEnergy, 0.84));
 
-    showBeatChip('DJ 计算主拍…');
+    showBeatChip('DJ computing main beats…');
     var onset = new Float32Array(nFrames);
     for (var oi = 2; oi < nFrames; oi++) {
       var lowRise = Math.max(0, lowEnergy[oi] - lowEnergy[oi - 1]);
@@ -12260,7 +12260,7 @@ function applyPodcastDjProfileFromMap(map) {
 
 function smoothPodcastDjMapHandoff(songKey, map, token) {
   if (!map) return;
-  showBeatChip('DJ 锁拍完成…');
+  showBeatChip('DJ beat lock complete…');
   var apply = function() {
     if (token !== djBeatMapToken || !djMode.active || djMode.songKey !== songKey) return;
     djBeatMapCache[songKey] = map;
@@ -12269,7 +12269,7 @@ function smoothPodcastDjMapHandoff(songKey, map, token) {
     syncPodcastDjMapCursor(audio ? audio.currentTime : 0, true);
     notifyDesktopLyricsBeatMapReady();
     hideBeatChip();
-    showToast('DJ 离线锁拍完成: ' + (map.visualBeatCount || 0) + ' 个主拍');
+    showToast('DJ offline beat lock complete: ' + (map.visualBeatCount || 0) + ' beats');
   };
   scheduleVisualApply(apply, 260, 360);
 }
@@ -12284,19 +12284,19 @@ function smoothPodcastDjIntroHandoff(songKey, map, token) {
     applyPodcastDjProfileFromMap(map);
     syncPodcastDjMapCursor(audio ? audio.currentTime : 0, true);
     notifyDesktopLyricsBeatMapReady();
-    showBeatChip('DJ 开头已锁拍，全曲继续分析…');
+    showBeatChip('DJ intro locked, continuing full analysis…');
   };
   scheduleVisualApply(apply, 0, 240);
 }
 
 function showBeatChip(text) {
   if (LOCAL_ONLY_MODE) {
-    if (localBeatAnalysis && localBeatAnalysis.active) setLocalBeatStatus(text || '分析中...', 'warn');
+    if (localBeatAnalysis && localBeatAnalysis.active) setLocalBeatStatus(text || 'Analyzing…', 'warn');
     return;
   }
-  document.getElementById('beat-text').textContent = text || '分析节奏…';
+  document.getElementById('beat-text').textContent = text || 'Analyzing beats…';
   document.getElementById('beat-chip').classList.add('show');
-  if (localBeatAnalysis && localBeatAnalysis.active) setLocalBeatStatus(text || '分析中...', 'warn');
+  if (localBeatAnalysis && localBeatAnalysis.active) setLocalBeatStatus(text || 'Analyzing…', 'warn');
 }
 function hideBeatChip() {
   document.getElementById('beat-chip').classList.remove('show');
@@ -12497,7 +12497,7 @@ function applyLocalBeatMap(song, mode, map, fromCache) {
   }
   hideBeatChip();
   notifyDesktopLyricsBeatMapReady();
-  if (fromCache && !LOCAL_ONLY_MODE) showToast((mode === 'dj' ? 'DJ' : 'MR') + ' 本地节奏缓存已载入');
+  if (fromCache && !LOCAL_ONLY_MODE) showToast((mode === 'dj' ? 'DJ' : 'MR') + ' local beat cache loaded');
   return true;
 }
 function isCurrentLocalQueueSong(song) {
@@ -12619,8 +12619,8 @@ function updateLocalLibraryProcessingProgress(done) {
   wrap.hidden = !total;
   if (text) {
     text.textContent = done
-      ? '封面 / 歌词加载完成'
-      : ('后台加载封面/歌词 ' + assetsDone + '/' + total);
+      ? 'Cover / lyrics load complete'
+      : ('Loading cover/lyrics in background ' + assetsDone + '/' + total);
   }
   if (count) count.textContent = percent + '%';
   if (fill) fill.style.width = percent + '%';
@@ -12775,12 +12775,12 @@ function updateLocalBeatModal() {
   if (modal) modal.classList.toggle('analyzing', !!localBeatAnalysis.active);
   var title = document.getElementById('local-beat-title');
   var sub = document.getElementById('local-beat-sub');
-  if (title) title.textContent = song.name || '本地歌曲';
+  if (title) title.textContent = song.name || 'Local Song';
   if (sub) {
     var cachedBits = [];
     if (song.localKey && getLocalBeatEntry(song.localKey, 'mr')) cachedBits.push('MR cached');
-    if (song.localKey && getLocalBeatEntry(song.localKey, 'dj')) cachedBits.push('DJ 已缓存');
-    sub.textContent = cachedBits.length ? cachedBits.join(' / ') : '选择一种电影视角分析方式';
+    if (song.localKey && getLocalBeatEntry(song.localKey, 'dj')) cachedBits.push('DJ cached');
+    sub.textContent = cachedBits.length ? cachedBits.join(' / ') : 'Select a cinematic analysis mode';
   }
   var mr = document.getElementById('local-beat-tab-mr');
   var dj = document.getElementById('local-beat-tab-dj');
@@ -12788,14 +12788,14 @@ function updateLocalBeatModal() {
   if (dj) dj.classList.toggle('active', mode === 'dj');
   var desc = document.getElementById('local-beat-desc');
   if (desc) desc.textContent = mode === 'dj'
-    ? '适合 DJ、长混音或鼓点密集的本地音频，会使用更稳定的低频锁拍并进入 DJ 视觉驱动。'
-    : '适合普通歌曲和日常播放，会沿用 Mineradio 电影视角的综合节奏分析。';
+    ? 'Best for DJ mixes, long mixes, or drum-heavy audio. Uses stable low-frequency beat lock and activates DJ visual drive.'
+    : 'Best for regular songs and daily playback. Uses Mineradio\'s comprehensive cinematic beat analysis.';
   var start = document.getElementById('local-beat-start-btn');
   var cancel = document.getElementById('local-beat-cancel-btn');
   var later = document.getElementById('local-beat-later-btn');
   if (start) {
     start.disabled = !!localBeatAnalysis.active;
-    start.textContent = getLocalBeatEntry(song.localKey, mode) ? '使用缓存' : '开始分析';
+    start.textContent = getLocalBeatEntry(song.localKey, mode) ? 'Use Cache' : 'Start Analysis';
   }
   if (cancel) cancel.style.display = localBeatAnalysis.active ? '' : 'none';
   if (later) later.style.display = localBeatAnalysis.active ? 'none' : '';
@@ -12815,7 +12815,7 @@ function cancelLocalBeatAnalysis() {
   cancelDjBeatAnalysisTimer();
   hideBeatChip();
   if (localBeatAnalysis.mode === 'dj') setDjModeActive(false, localBeatAnalysis.song || currentLocalSong);
-  setLocalBeatStatus('已取消分析', 'fail');
+  setLocalBeatStatus('Analysis cancelled', 'fail');
   updateLocalBeatModal();
 }
 async function startLocalBeatAnalysis(mode) {
@@ -12835,7 +12835,7 @@ async function startLocalBeatAnalysis(mode) {
   localBeatAnalysis.token++;
   var localToken = localBeatAnalysis.token;
   updateLocalBeatModal();
-  setLocalBeatStatus((mode === 'dj' ? 'DJ' : 'MR') + ' 分析准备中...', 'warn');
+  setLocalBeatStatus((mode === 'dj' ? 'DJ' : 'MR') + ' analysis preparing...', 'warn');
   try {
     var map = null;
     if (mode === 'dj') {
@@ -12862,9 +12862,9 @@ async function startLocalBeatAnalysis(mode) {
     storeLocalBeatEntry(song.localKey, mode, map, song);
     applyLocalBeatMap(song, mode, map, false);
     localBeatAnalysis.active = false;
-    setLocalBeatStatus((mode === 'dj' ? 'DJ' : 'MR') + ' 分析完成: ' + localBeatVisualCount(map) + ' 个主拍');
+    setLocalBeatStatus((mode === 'dj' ? 'DJ' : 'MR') + ' analysis complete: ' + localBeatVisualCount(map) + ' beats');
     updateLocalBeatModal();
-    showToast((mode === 'dj' ? 'DJ' : 'MR') + ' 本地节奏分析完成');
+    showToast((mode === 'dj' ? 'DJ' : 'MR') + ' local beat analysis complete');
     setTimeout(function(){
       if (!localBeatAnalysis.active) closeGsapModal(document.getElementById('local-beat-modal'));
     }, 900);
@@ -12873,15 +12873,15 @@ async function startLocalBeatAnalysis(mode) {
     localBeatAnalysis.active = false;
     hideBeatChip();
     if (mode === 'dj') setDjModeActive(false, song);
-    setLocalBeatStatus('分析失败，请换另一种模式重试', 'fail');
+    setLocalBeatStatus('Analysis failed, try the other mode', 'fail');
     updateLocalBeatModal();
-    showToast('本地节奏分析失败');
+    showToast('Local beat analysis failed');
   }
 }
 
 function smoothBeatMapHandoff(songId, map, token, song) {
   if (!map) return;
-  showBeatChip('节奏缓冲中…');
+  showBeatChip('Buffering beats…');
   var wait = Math.max(260, Math.min(720, 340 + (beatPulse + beatCam.punch) * 260));
   var apply = function() {
     if (token !== beatMapToken) return;
@@ -12892,7 +12892,7 @@ function smoothBeatMapHandoff(songId, map, token, song) {
     syncBeatMapPlaybackCursor(t, true);
     hideBeatChip();
     notifyDesktopLyricsBeatMapReady();
-    showToast('节奏分析完成: ' + (map.visualBeatCount || (map.cameraBeats && map.cameraBeats.length) || 0) + ' 个视觉主拍');
+    showToast('Beat analysis complete: ' + (map.visualBeatCount || (map.cameraBeats && map.cameraBeats.length) || 0) + ' visual beats');
     writeBeatDiskCache(songId, map, song, 'mr');
     scheduleQueueBeatPrefetch(currentIdx, 1000);
   };
@@ -13547,8 +13547,8 @@ function makeShelfManager() {
   function currentItems() {
     if (playQueue.length) {
       return playQueue.map(function(song, idx){
-        return { type:'queue', title: song.name, sub: songDisplaySubtitle(song) || '未知',
-          cover: songCoverSrc(song, 360), tag: idx === currentIdx ? '正在播放' : ('#' + (idx+1)), queueIndex: idx };
+        return { type:'queue', title: song.name, sub: songDisplaySubtitle(song) || 'Unknown',
+          cover: songCoverSrc(song, 360), tag: idx === currentIdx ? 'Now Playing' : ('#' + (idx+1)), queueIndex: idx };
       });
     }
     return [];
@@ -13594,7 +13594,7 @@ function makeShelfManager() {
     var W = cv.width, H = cv.height;
     ctx.clearRect(0, 0, W, H);
     var pad = 18;
-    var isNow = item.type === 'queue' && item.tag === '正在播放';
+    var isNow = item.type === 'queue' && item.tag === 'Now Playing';
     var shelfLook = shelfSettings();
 
     // 卡片底
@@ -13675,7 +13675,7 @@ function makeShelfManager() {
         ctx.lineWidth = 1.1; ctx.stroke();
         ctx.font = '800 14px Inter, "Microsoft YaHei", Arial';
         ctx.fillStyle = readableInkForHex(shelfAccentHex());
-        ctx.fillText('▶ 播放歌单', tx + 25, actionY + 24);
+        ctx.fillText('▶ Play Playlist', tx + 25, actionY + 24);
 
         makeRoundRect(ctx, tx + 150, actionY, 104, 38, 18);
         ctx.fillStyle = 'rgba(255,255,255,0.055)'; ctx.fill();
@@ -13683,11 +13683,11 @@ function makeShelfManager() {
         ctx.lineWidth = 1.1; ctx.stroke();
         ctx.font = '700 14px Inter, "Microsoft YaHei", Arial';
         ctx.fillStyle = 'rgba(255,255,255,0.78)';
-        ctx.fillText('详情', tx + 184, actionY + 24);
+        ctx.fillText('Details', tx + 184, actionY + 24);
       } else if (item.type === 'queue') {
         ctx.font = '600 14px Inter, "Microsoft YaHei", Arial';
         ctx.fillStyle = shelfAccentRgba(0.84);
-        ctx.fillText('点击播放', tx, actionY + 25);
+        ctx.fillText('Click to Play', tx, actionY + 25);
       }
     }
 
@@ -14071,7 +14071,7 @@ void main(){ vec4 t = texture2D(uDotTex, gl_PointCoord); if (t.a < 0.02) discard
     selectedIdx = Math.round(centerTarget);
     playShelfSelectTick(paneSwitchDir, 'card');
     rebuild();
-    showToast(nextPane === 'fav' ? '收藏歌单' : '我的歌单');
+    showToast(nextPane === 'fav' ? 'Favorites' : 'My Playlists');
     return true;
   }
 
@@ -14476,13 +14476,13 @@ function makeContentListManager() {
     ctx.stroke();
     ctx.font = '800 38px Inter, "Microsoft YaHei", Arial';
     ctx.fillStyle = 'rgba(255,246,220,0.94)';
-    ctx.fillText(ellipsize(ctx, playlistTitle || '歌单详情', W - 310), 72, 92);
+    ctx.fillText(ellipsize(ctx, playlistTitle || 'Playlist Details', W - 310), 72, 92);
     ctx.font = '500 18px Inter, "Microsoft YaHei", Arial';
     ctx.fillStyle = canvasAccent(0.62);
     var playableCount = allTracks.filter(function(song){ return song && song.id && song.type !== 'podcast-radio'; }).length;
     var contentCount = allTracks.filter(function(song){ return song && song.id; }).length;
     var isLoading = allTracks.length === 1 && isLoadingLabel(allTracks[0] && allTracks[0].name);
-    var countLabel = playableCount ? (playableCount + ' 首歌曲') : (isLoading ? '正在载入' : '暂无可播放歌曲');
+    var countLabel = playableCount ? (playableCount + ' tracks') : (isLoading ? 'Loading…' : 'No playable tracks');
     ctx.fillText(countLabel, 74, 128);
     var coverUrl = sourceCard && sourceCard.item && sourceCard.item.cover;
     var coverSize = 96, coverX = W - 172, coverY = 56;
@@ -14526,7 +14526,7 @@ function makeContentListManager() {
   }
 
   function isLoadingLabel(text) {
-    return /加载中|正在载入/.test(String(text || ''));
+    return /Loading…|加载中|正在载入/.test(String(text || ''));
   }
 
   function isLoadingContent() {
@@ -14610,7 +14610,7 @@ function makeContentListManager() {
     if (loadingRow) {
       ctx.font = '700 22px Inter, "Microsoft YaHei", Arial';
       ctx.fillStyle = 'rgba(255,247,224,0.88)';
-      ctx.fillText('正在载入歌单', textX, 42);
+      ctx.fillText('Loading playlist…', textX, 42);
       var phase = ((uniforms.uTime.value || 0) * 0.85) % 1;
       for (var sk = 0; sk < 3; sk++) {
         var barY = 58 + sk * 13;
@@ -14709,7 +14709,7 @@ function makeContentListManager() {
       ctx.stroke();
       ctx.font = '700 15px Inter, Arial';
       ctx.fillStyle = readableInkForHex(shelfAccentHex());
-      ctx.fillText('播放', btnX + 36, btnY + 29);
+      ctx.fillText('Play', btnX + 36, btnY + 29);
     }
     row.texture.needsUpdate = true;
   }
@@ -14884,7 +14884,7 @@ function makeContentListManager() {
         // 清旧
         disposeRows();
         // loading 行
-        allTracks = [{ name: '加载中…', artist: '' }];
+        allTracks = [{ name: 'Loading…', artist: '' }];
         panelDirty = true;
         rowsDirty = true;
         syncRenderedRows(true);
@@ -14898,7 +14898,7 @@ function makeContentListManager() {
         disposeRows();
         var tracks = localLibraryPlaybackSongs().map(cloneSong);
         if (!tracks.length) {
-          allTracks = [{ name: '本地库为空', artist: '' }];
+          allTracks = [{ name: 'Local library is empty', artist: '' }];
           panelDirty = true;
           rowsDirty = true;
           startRowsLoadedIntro();
@@ -14913,7 +14913,7 @@ function makeContentListManager() {
         syncRenderedRows(true);
       } catch (renderReadyErr) {
         console.warn('[ShelfContentReadyRender]', playlistId, renderReadyErr);
-        showToast('歌单已载入，3D列表刷新失败');
+        showToast('Playlist loaded, but 3D list refresh failed');
       }
     },
     close: function() {
@@ -15199,8 +15199,8 @@ function makeContentListManager() {
 
 function compactCount(n) {
   n = Number(n) || 0;
-  if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
-  if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+  if (n >= 100000000) return (n / 100000000).toFixed(1) + 'B';
+  if (n >= 10000) return (n / 10000).toFixed(1) + 'W';
   return String(n);
 }
 function drawCanvasHeart(ctx, cx, cy, size, color) {
@@ -15567,21 +15567,21 @@ function normalizePlaybackQuality(value) {
 }
 function playbackQualityLabel(value) {
   value = normalizePlaybackQuality(value);
-  if (value === 'jymaster') return '超清母带';
-  if (value === 'hires') return '高清臻音';
-  if (value === 'lossless') return '无损';
-  if (value === 'exhigh') return '极高';
-  if (value === 'standard') return '标准';
-  return '高清臻音';
+  if (value === 'jymaster') return 'Master';
+  if (value === 'hires') return 'HiRes';
+  if (value === 'lossless') return 'Lossless';
+  if (value === 'exhigh') return 'Very High';
+  if (value === 'standard') return 'Standard';
+  return 'HiRes';
 }
 function playbackQualityShortLabel(value) {
   value = normalizePlaybackQuality(value);
-  if (value === 'jymaster') return '母带';
-  if (value === 'hires') return '臻音';
+  if (value === 'jymaster') return 'Master';
+  if (value === 'hires') return 'HiRes';
   if (value === 'lossless') return 'SQ';
   if (value === 'exhigh') return 'HQ';
   if (value === 'standard') return 'STD';
-  return '臻音';
+  return 'HiRes';
 }
 function playbackQualityRank(value) {
   value = normalizePlaybackQuality(value);
@@ -15622,13 +15622,13 @@ function updatePlaybackQualityUi() {
   var btn = document.getElementById('quality-btn');
   var displayQuality = playbackQuality;
   if (label) label.textContent = playbackQualityShortLabel(displayQuality);
-  if (btn) btn.title = '音质: 本地文件按原始编码播放';
+  if (btn) btn.title = 'Audio Quality: local files play at original encoding';
   document.querySelectorAll('.quality-option').forEach(function(option){
     var q = normalizePlaybackQuality(option.dataset.quality);
     option.classList.toggle('active', q === displayQuality);
     option.classList.remove('locked');
     option.disabled = false;
-    option.title = '本地文件按原始编码播放';
+    option.title = 'Local files play at original encoding';
   });
 }
 function setPlaybackQuality(value) {
@@ -15646,11 +15646,11 @@ function canReloadCurrentTrackForQuality() {
 function applyPlaybackQualityToCurrentTrack(nextQuality) {
   var label = playbackQualityLabel(nextQuality || playbackQuality);
   if (!canReloadCurrentTrackForQuality()) {
-    showToast('音质偏好: ' + label + ' · 下次播放生效');
+    showToast('Quality preference: ' + label + ' · takes effect on next play');
     return;
   }
   var resumeAt = audio && isFinite(audio.currentTime) ? audio.currentTime : 0;
-  showToast('正在切换音质: ' + label);
+  showToast('Switching quality: ' + label);
   Promise.resolve(playQueueAt(currentIdx, {
     qualityOverride: nextQuality || playbackQuality,
     qualitySwitch: true,
@@ -15658,7 +15658,7 @@ function applyPlaybackQualityToCurrentTrack(nextQuality) {
     preserveHomeState: true,
   })).catch(function(e){
     console.warn('[QualitySwitch]', e);
-    showToast('音质切换失败，已保留偏好');
+    showToast('Quality switch failed, preference saved');
   }).finally(forcePlaybackControlsInteractive);
 }
 function toggleQualityPanel(e) {
@@ -15778,8 +15778,8 @@ function setHomeArt(id, url, size) {
 }
 function compactHomeCount(n) {
   n = Number(n) || 0;
-  if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, '') + '亿';
-  if (n >= 10000) return Math.round(n / 10000) + '万';
+  if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, '') + 'B';
+  if (n >= 10000) return Math.round(n / 10000) + 'W';
   return n ? String(n) : '';
 }
 function loadListenStatsState() {
@@ -15812,7 +15812,7 @@ function listenSongSnapshot(song) {
     mediaMid: song.mediaMid || song.media_mid || '',
     type: song.type || 'song',
     sourceKey: song.type === 'local' ? 'local' : (song.source || song.provider || ''),
-    name: song.name || song.title || '未知歌曲',
+    name: song.name || song.title || 'Unknown Song',
     artist: songArtistText(song),
     cover: songCoverSrc(song, 220) || song.cover || '',
     source: songSourceLabel(song),
@@ -15870,7 +15870,7 @@ function finalizeListenSession(completed) {
     mediaMid: snap.mediaMid || '',
     type: snap.type || 'song',
     sourceKey: snap.sourceKey || '',
-    name: snap.name || '未知歌曲',
+    name: snap.name || 'Unknown Song',
     artist: snap.artist || '',
     cover: snap.cover || '',
     source: snap.source || '',
@@ -15921,11 +15921,11 @@ function homeListenSummary() {
 }
 function fallbackHomeTiles() {
   return [
-    { kind: 'local', title: '导入本地音乐', sub: 'MP3 / FLAC 文件夹' },
-    { kind: 'search', title: '搜索本地库', sub: '歌名 / 歌手 / 文件名', query: '' },
-    { kind: 'local', title: '匹配歌词', sub: '同名 LRC / TXT' },
-    { kind: 'local', title: '匹配封面', sub: '同名图片或内嵌封面' },
-    { kind: 'guide', title: '视觉舞台', sub: '粒子 / 歌词 / 封面' },
+    { kind: 'local', title: 'Import Local Music', sub: 'MP3 / FLAC folder' },
+    { kind: 'search', title: 'Search Local Library', sub: 'Song / Artist / Filename', query: '' },
+    { kind: 'local', title: 'Match Lyrics', sub: 'Same-name LRC / TXT' },
+    { kind: 'local', title: 'Match Cover', sub: 'Same-name image or embedded cover' },
+    { kind: 'guide', title: 'Visual Stage', sub: 'Particles / Lyrics / Cover' },
   ];
 }
 function homeTileCover(item) {
@@ -15968,19 +15968,19 @@ function renderHomeTiles() {
   var localPool = localSearchPool();
   var summary = homeListenSummary();
   if (summary.recent && tiles.length < 5) {
-    tiles.push({ kind: 'recent', title: summary.recent.name || '继续听', sub: summary.recent.artist || summary.recent.source || '', cover: summary.recent.cover, record: summary.recent });
+    tiles.push({ kind: 'recent', title: summary.recent.name || 'Continue Listening', sub: summary.recent.artist || summary.recent.source || '', cover: summary.recent.cover, record: summary.recent });
   }
   if (summary.topArtist && tiles.length < 5) {
-    tiles.push({ kind: 'profile', title: summary.topArtist.name, sub: '常听歌手 · ' + summary.topArtist.plays + ' 次', query: summary.topArtist.name });
+    tiles.push({ kind: 'profile', title: summary.topArtist.name, sub: 'Top Artist · ' + summary.topArtist.plays + ' plays', query: summary.topArtist.name });
   }
   localPool.slice(0, Math.max(0, 5 - tiles.length)).forEach(function(song, i){
-    tiles.push({ kind: 'song', index: i, song: song, title: song.name || '本地歌曲', sub: songDisplaySubtitle(song) });
+    tiles.push({ kind: 'song', index: i, song: song, title: song.name || 'Local Song', sub: songDisplaySubtitle(song) });
   });
   if (!tiles.length) tiles = fallbackHomeTiles();
   tiles = tiles.slice(0, 5);
-  if (title) title.textContent = '本地音乐库';
+  if (title) title.textContent = 'Local Library';
   if (note) {
-    note.textContent = localPool.length ? ('已导入 ' + localPool.length + ' 首 · 点击即可播放') : '导入文件夹后显示歌曲、歌词和封面';
+    note.textContent = localPool.length ? ('Imported ' + localPool.length + ' tracks · Click to play') : 'Import a folder to see songs, lyrics, and covers';
   }
   row.innerHTML = tiles.map(function(item, i){
     var cover = homeTileCover(item);
@@ -16005,16 +16005,16 @@ function renderHomeDiscover() {
   var firstLocal = localSongs[0] || null;
   var secondLocal = localSongs[1] || null;
   var thirdLocal = localSongs[2] || null;
-  if (weatherTitle) weatherTitle.textContent = '本地音乐库';
+  if (weatherTitle) weatherTitle.textContent = 'Local Library';
   if (weatherKicker) weatherKicker.textContent = 'Mineradio · Local Player';
   if (sub) sub.textContent = localSongs.length
-    ? '已导入本地音乐，支持 MP3 / FLAC、同名 LRC/TXT 歌词和封面图片。'
-    : '导入音乐文件夹后即可本地播放，不需要登录任何账号。';
+    ? 'Local music imported. Supports MP3 / FLAC, same-name LRC/TXT lyrics and cover images.'
+    : 'Import a music folder to play locally — no login required.';
   if (weatherMeta) {
     var localMeta = [
-      localSongs.length ? ('已导入 ' + localSongs.length + ' 首') : '尚未导入',
+      localSongs.length ? ('Imported ' + localSongs.length + ' tracks') : 'Not yet imported',
       'MP3 / FLAC',
-      'LRC / TXT 歌词'
+      'LRC / TXT Lyrics'
     ];
     weatherMeta.innerHTML = localMeta.map(function(text){ return '<span class="home-weather-pill">' + escHtml(text) + '</span>'; }).join('');
   }
@@ -16030,18 +16030,18 @@ function renderHomeDiscover() {
   var localProfileSub = document.getElementById('home-profile-sub');
   var localSearchTitle = document.getElementById('home-library-title');
   var localSearchSub = document.getElementById('home-library-sub');
-  if (localImportTitle) localImportTitle.textContent = '导入文件夹';
-  if (localImportSub) localImportSub.textContent = '选择包含 MP3 / FLAC 的目录';
-  if (localDailyTitle) localDailyTitle.textContent = firstLocal ? firstLocal.name : '播放本地音乐';
-  if (localDailySub) localDailySub.textContent = firstLocal ? songDisplaySubtitle(firstLocal) : '导入后从第一首开始播放';
-  if (localQueueTitle) localQueueTitle.textContent = secondLocal ? secondLocal.name : '本地队列';
-  if (localQueueSub) localQueueSub.textContent = secondLocal ? songDisplaySubtitle(secondLocal) : '查看已导入的歌曲';
-  if (localContinueTitle) localContinueTitle.textContent = localSummary.recent ? localSummary.recent.name : '继续听';
-  if (localContinueSub) localContinueSub.textContent = localSummary.recent ? (localSummary.recent.artist || localSummary.recent.source || '最近播放') : '最近播放会出现在这里';
-  if (localProfileTitle) localProfileTitle.textContent = localSummary.topArtist ? localSummary.topArtist.name : (localSummary.topSong ? localSummary.topSong.name : '听歌画像');
-  if (localProfileSub) localProfileSub.textContent = localSummary.topArtist ? ('常听歌手 · ' + localSummary.topArtist.plays + ' 次') : (localSummary.totalPlays ? localSummary.totalPlays + ' 次有效播放' : '播放几首后生成偏好');
-  if (localSearchTitle) localSearchTitle.textContent = thirdLocal ? thirdLocal.name : '搜索本地库';
-  if (localSearchSub) localSearchSub.textContent = thirdLocal ? songDisplaySubtitle(thirdLocal) : '按歌名、歌手或文件名查找';
+  if (localImportTitle) localImportTitle.textContent = 'Import Folder';
+  if (localImportSub) localImportSub.textContent = 'Select folder containing MP3 / FLAC';
+  if (localDailyTitle) localDailyTitle.textContent = firstLocal ? firstLocal.name : 'Play Local Music';
+  if (localDailySub) localDailySub.textContent = firstLocal ? songDisplaySubtitle(firstLocal) : 'Play from first track after import';
+  if (localQueueTitle) localQueueTitle.textContent = secondLocal ? secondLocal.name : 'Local Queue';
+  if (localQueueSub) localQueueSub.textContent = secondLocal ? songDisplaySubtitle(secondLocal) : 'View imported songs';
+  if (localContinueTitle) localContinueTitle.textContent = localSummary.recent ? localSummary.recent.name : 'Continue Listening';
+  if (localContinueSub) localContinueSub.textContent = localSummary.recent ? (localSummary.recent.artist || localSummary.recent.source || 'Recently played') : 'Recently played will appear here';
+  if (localProfileTitle) localProfileTitle.textContent = localSummary.topArtist ? localSummary.topArtist.name : (localSummary.topSong ? localSummary.topSong.name : 'Listening Profile');
+  if (localProfileSub) localProfileSub.textContent = localSummary.topArtist ? ('Top Artist · ' + localSummary.topArtist.plays + ' plays') : (localSummary.totalPlays ? localSummary.totalPlays + ' valid plays' : 'Preferences generated after a few plays');
+  if (localSearchTitle) localSearchTitle.textContent = thirdLocal ? thirdLocal.name : 'Search Local Library';
+  if (localSearchSub) localSearchSub.textContent = thirdLocal ? songDisplaySubtitle(thirdLocal) : 'Search by song, artist, or filename';
   setHomeArt('home-weather-art', firstLocal && songCoverSrc(firstLocal, 280), 280);
   setHomeArt('home-daily-art', firstLocal && songCoverSrc(firstLocal, 280), 280);
   setHomeArt('home-private-art', secondLocal && songCoverSrc(secondLocal, 280) || firstLocal && songCoverSrc(firstLocal, 280), 280);
@@ -16452,7 +16452,7 @@ function songFromListenRecord(record) {
     mid: record.mid || '',
     songmid: record.mid || '',
     mediaMid: record.mediaMid || '',
-    name: record.name || '继续听',
+    name: record.name || 'Continue Listening',
     artist: record.artist || '',
     cover: record.cover || '',
   };
@@ -16520,16 +16520,16 @@ function currentCoverSong() {
 function songDurationLabel(song) {
   var sec = playbackDurationFromSong(song);
   if (!sec && audio && isFinite(audio.duration) && audio.duration > 0) sec = audio.duration;
-  if (!sec) return '未知';
+  if (!sec) return 'Unknown';
   return formatProgramTime(sec);
 }
 function songSourceLabel(song) {
-  if (!song) return '未知';
-  if (song.type === 'local') return '本地上传';
-  return '本地音乐';
+  if (!song) return 'Unknown';
+  if (song.type === 'local') return 'Local Upload';
+  return 'Local Music';
 }
 function isLocalPlaceholderArtist(text) {
-  return /^(本地文件|本地上传|本地音乐|未知歌手)$/i.test(String(text || '').trim());
+  return /^(本地文件|本地上传|本地音乐|未知歌手|Local Upload|Local Music|Unknown Artist)$/i.test(String(text || '').trim());
 }
 function songArtistText(song) {
   var artist = String(song && (song.artist || song.albumArtist) || '').trim();
@@ -16584,7 +16584,7 @@ function localAudioQualityText(song) {
   var bits = [];
   if (format) bits.push(format);
   if (kbps) bits.push(Math.round(kbps) + ' kbps');
-  else if (format === 'FLAC' || format === 'WAV') bits.push('无损');
+  else if (format === 'FLAC' || format === 'WAV') bits.push('Lossless');
   return bits.join(' · ');
 }
 function songDisplaySubtitle(song) {
@@ -16602,7 +16602,7 @@ function songDisplaySubtitle(song) {
   return bits.join(' · ') || songSourceLabel(song);
 }
 function detailRow(label, value) {
-  value = value == null || value === '' ? '未知' : value;
+  value = value == null || value === '' ? 'Unknown' : value;
   return '<div class="detail-k">' + escHtml(label) + '</div><div class="detail-v">' + escHtml(String(value)) + '</div>';
 }
 function currentArtistNames(song) {
@@ -16645,7 +16645,7 @@ function renderDetailComments(comments) {
     var avatar = user.avatar ? coverUrlWithSize(user.avatar, 64) : '';
     return '<div class="comment-item">' +
       (avatar ? '<img class="comment-avatar" src="' + avatar + '" alt="">' : '<div class="comment-avatar"></div>') +
-      '<div class="comment-main"><div class="comment-meta">' + escHtml(user.nickname || '音乐用户') + (c.likedCount ? (' · ' + c.likedCount + ' 赞') : '') + (c.time ? (' · ' + escHtml(commentTimeLabel(c.time))) : '') + '</div>' +
+      '<div class="comment-main"><div class="comment-meta">' + escHtml(user.nickname || 'Music User') + (c.likedCount ? (' · ' + c.likedCount + ' likes') : '') + (c.time ? (' · ' + escHtml(commentTimeLabel(c.time))) : '') + '</div>' +
       '<div class="comment-text">' + escHtml(c.content || '') + '</div></div>' +
     '</div>';
   }).join('') + '</div>';
@@ -16664,7 +16664,7 @@ function renderArtistSongList(songs) {
       '<div class="artist-song-rank">' + String(i + 1).padStart(2, '0') + '</div>' +
       coverHtml +
       '<div class="artist-song-main"><div class="artist-song-name">' + escHtml(s.name || '') + '</div>' +
-      '<div class="artist-song-meta">' + escHtml((s.album || '未知专辑') + (s.duration ? (' · ' + songDurationLabel(s)) : '')) + '</div></div>' +
+      '<div class="artist-song-meta">' + escHtml((s.album || 'Unknown Album') + (s.duration ? (' · ' + songDurationLabel(s)) : '')) + '</div></div>' +
       actionsHtml +
     '</div>';
   }).join('') + '</div>';
@@ -16699,50 +16699,50 @@ function closeTrackDetailModal() {
 }
 function openTrackDetailModal(type, songOverride) {
   var song = songOverride || currentCoverSong();
-  if (!song) { showToast('先播放或选择一首歌'); return; }
+  if (!song) { showToast('Play or select a song first'); return; }
   if (immersiveMode) setImmersiveMode(false);
   var heading = document.getElementById('track-detail-heading');
   var body = document.getElementById('track-detail-body');
   if (!heading || !body) return;
   var cover = songCoverSrc(song, 180);
   var coverHtml = cover ? '<img class="detail-cover" src="' + cover + '" alt="">' : '<div class="detail-cover"></div>';
-  var title = song.name || '当前歌曲';
+  var title = song.name || 'Current Song';
   var artists = currentArtistNames(song);
   var seq = ++trackDetailSeq;
   if (type === 'artist') {
-    var artistName = artists.join(' / ') || songArtistText(song) || '未知歌手';
-    var artistInitial = artistName && artistName !== '未知歌手' ? artistName.slice(0, 1) : '歌';
+    var artistName = artists.join(' / ') || songArtistText(song) || 'Unknown Artist';
+    var artistInitial = artistName && artistName !== 'Unknown Artist' ? artistName.slice(0, 1) : 'A';
     var artistCoverHtml = '<div id="artist-detail-cover" class="detail-cover detail-artist-avatar">' + escHtml(artistInitial) + '</div>';
-    var artistEmptyText = '纯本地模式仅显示当前文件里的歌手信息。';
-    heading.textContent = '歌手详情';
+    var artistEmptyText = 'Local-only mode shows only artist info from the current file.';
+    heading.textContent = 'Artist Details';
     body.innerHTML =
       '<div class="detail-hero">' + artistCoverHtml +
         '<div style="min-width:0;flex:1"><div class="detail-title">' + escHtml(artistName) + '</div>' +
         '<div class="detail-sub">From current track · ' + escHtml(title) + '</div></div>' +
       '</div>' +
       '<div class="detail-grid">' +
-        detailRow('当前歌曲', title) +
-        detailRow('关联歌手', artistName) +
-        detailRow('所属专辑', song.album || '未知') +
-        detailRow('来源', songSourceLabel(song)) +
+        detailRow('Current Song', title) +
+        detailRow('Artist', artistName) +
+        detailRow('Album', song.album || 'Unknown') +
+        detailRow('Source', songSourceLabel(song)) +
       '</div>' +
-      '<div class="detail-chip-row">' + (artists.length ? artists.map(function(name){ return '<span class="detail-chip">' + escHtml(name) + '</span>'; }).join('') : '<span class="detail-chip">未知歌手</span>') + '</div>' +
-      '<div class="detail-section"><div class="detail-section-head"><div class="detail-section-title">本地信息</div></div><div id="artist-hot-songs"><div class="detail-empty">' + escHtml(artistEmptyText) + '</div></div></div>';
+      '<div class="detail-chip-row">' + (artists.length ? artists.map(function(name){ return '<span class="detail-chip">' + escHtml(name) + '</span>'; }).join('') : '<span class="detail-chip">Unknown Artist</span>') + '</div>' +
+      '<div class="detail-section"><div class="detail-section-head"><div class="detail-section-title">Local Info</div></div><div id="artist-hot-songs"><div class="detail-empty">' + escHtml(artistEmptyText) + '</div></div></div>';
   } else {
-    heading.textContent = '歌曲详情';
+    heading.textContent = 'Song Details';
     var detailCanLoadComments = false;
-    var detailCommentTitle = '本地信息';
-    var detailEmptyText = '本地歌曲不加载在线评论。';
+    var detailCommentTitle = 'Local Info';
+    var detailEmptyText = 'Local songs do not load online comments.';
     var detailArtist = songArtistText(song);
     var detailAlbum = String(song.album || '').trim();
     var detailQuality = song.type === 'local' ? localAudioQualityText(song) : '';
-    var detailSubtitle = songDisplaySubtitle(song) || detailQuality || '未知歌手';
+    var detailSubtitle = songDisplaySubtitle(song) || detailQuality || 'Unknown Artist';
     var detailPrimaryChip = detailQuality || songSourceLabel(song);
     var localDetailRows = song.type === 'local'
-      ? detailRow('音质', detailQuality || '未知') +
-        detailRow('文件路径', song.localPath || song.localFile && song.localFile.name || '未知') +
-        detailRow('歌词文件', song.localLyricFileName || '未匹配') +
-        detailRow('封面文件', song.localCoverFileName || (song.localCoverDataUrl ? '内嵌封面' : '未匹配'))
+      ? detailRow('Quality', detailQuality || 'Unknown') +
+        detailRow('File Path', song.localPath || song.localFile && song.localFile.name || 'Unknown') +
+        detailRow('Lyric File', song.localLyricFileName || 'Not matched') +
+        detailRow('Cover File', song.localCoverFileName || (song.localCoverDataUrl ? 'Embedded Cover' : 'Not matched'))
       : '';
     body.innerHTML =
       '<div class="detail-hero">' + coverHtml +
@@ -16750,19 +16750,19 @@ function openTrackDetailModal(type, songOverride) {
         '<div class="detail-sub">' + escHtml(detailSubtitle) + '</div></div>' +
       '</div>' +
       '<div class="detail-grid">' +
-        detailRow('歌曲名', title) +
-        detailRow('歌手', detailArtist || '未知') +
-        detailRow('专辑', detailAlbum || '未知') +
-        detailRow('时长', songDurationLabel(song)) +
-        detailRow('来源', songSourceLabel(song)) +
-        detailRow('歌词源', currentLyricSourceLabel()) +
+        detailRow('Song', title) +
+        detailRow('Artist', detailArtist || 'Unknown') +
+        detailRow('Album', detailAlbum || 'Unknown') +
+        detailRow('Duration', songDurationLabel(song)) +
+        detailRow('Source', songSourceLabel(song)) +
+        detailRow('Lyric Source', currentLyricSourceLabel()) +
         localDetailRows +
       '</div>' +
       '<div class="detail-chip-row">' +
         '<span class="detail-chip">' + escHtml(detailPrimaryChip) + '</span>' +
         (isSongLiked(song) ? '<span class="detail-chip">Like</span>' : '') +
-        (getCustomCoverForSong(song) ? '<span class="detail-chip">自定义封面</span>' : '') +
-        (hasCustomLyricForSong(song) ? '<span class="detail-chip">自定义歌词</span>' : '') +
+        (getCustomCoverForSong(song) ? '<span class="detail-chip">Custom Cover</span>' : '') +
+        (hasCustomLyricForSong(song) ? '<span class="detail-chip">Custom Lyrics</span>' : '') +
       '</div>' +
       '<div class="detail-section"><div class="detail-section-head"><div class="detail-section-title">' + detailCommentTitle + '</div></div><div id="song-comments">' + (detailCanLoadComments ? '<div class="detail-loading">Loading comments...</div>' : '<div class="detail-empty">' + detailEmptyText + '</div>') + '</div></div>';
   }
@@ -16770,7 +16770,7 @@ function openTrackDetailModal(type, songOverride) {
   openGsapModal(document.getElementById('track-detail-modal'));
 }
 function openArtistDetailForSong(song) {
-  if (!song) { showToast('未找到歌手信息'); return; }
+  if (!song) { showToast('Artist info not found'); return; }
   openTrackDetailModal('artist', song);
 }
 function resolveArtistSongForDetail(song, artist) {
@@ -16798,7 +16798,7 @@ function setCustomCoverForCurrent(dataUrl, opts) {
   safeRenderQueuePanel('custom-cover-apply', { scrollCurrent: miniQueueOpen });
   safeShelfRebuild('custom-cover-apply');
   updateCustomCoverButton();
-  showToast(song ? (!hasKey ? '封面已应用' : (saved ? '封面已保存' : '封面已应用，存储空间不足')) : '已应用临时封面');
+  showToast(song ? (!hasKey ? 'Cover applied' : (saved ? 'Cover saved' : 'Cover applied, storage insufficient')) : 'Temporary cover applied');
 }
 function updateCustomCoverButton() {
   var btn = document.getElementById('clear-cover-btn');
@@ -16807,19 +16807,19 @@ function updateCustomCoverButton() {
   if (area) area.classList.toggle('has-cover-action', hasCover);
   if (!btn) return;
   btn.classList.toggle('has-cover', hasCover);
-  btn.title = hasCover ? '取消自定义封面' : '当前没有自定义封面';
+  btn.title = hasCover ? 'Remove Custom Cover' : 'No custom cover set';
   btn.setAttribute('aria-label', btn.title);
 }
 function clearCustomCoverForCurrent() {
   var song = currentCoverSong();
   if (!song) {
-    showToast('先播放或选择一首歌');
+    showToast('Play or select a song first');
     updateCustomCoverButton();
     return;
   }
   var custom = getCustomCoverForSong(song);
   if (!custom) {
-    showToast('当前没有自定义封面');
+    showToast('No custom cover set');
     updateCustomCoverButton();
     return;
   }
@@ -16841,7 +16841,7 @@ function clearCustomCoverForCurrent() {
   safeRenderQueuePanel('custom-cover-clear', { scrollCurrent: miniQueueOpen });
   safeShelfRebuild('custom-cover-clear');
   updateCustomCoverButton();
-  showToast('已恢复默认封面');
+  showToast('Default cover restored');
 }
 function readCustomLyricMap() {
   try {
@@ -16945,7 +16945,7 @@ function applyCustomLyricState(song, silent) {
   }
   var lines = parseCustomLyricText(entry.text);
   if (!lines.length) {
-    if (!silent) showToast('自定义歌词内容为空');
+    if (!silent) showToast('Custom lyrics content is empty');
     updateCustomLyricControls();
     return false;
   }
@@ -16991,7 +16991,7 @@ function setLyricSourceMode(mode, silent) {
     customLyricPrefs[key] = mode;
     saveCustomLyricPrefs();
   }
-  if (!silent) showToast(mode === 'custom' ? '已切换到自定义歌词' : '已切换到原歌词');
+  if (!silent) showToast(mode === 'custom' ? 'Switched to custom lyrics' : 'Switched to original lyrics');
   updateCustomLyricControls();
   return true;
 }
@@ -17002,17 +17002,17 @@ function updateCustomLyricControls() {
   var customBtn = document.getElementById('lyric-source-custom');
   if (originalBtn) {
     originalBtn.classList.toggle('active', lyricSourceMode === 'original');
-    originalBtn.title = '使用本地歌词或音频内嵌歌词';
+    originalBtn.title = 'Use local lyrics or embedded audio lyrics';
   }
   if (customBtn) {
     customBtn.classList.toggle('active', lyricSourceMode === 'custom');
     customBtn.classList.toggle('has-custom', hasCustom);
-    customBtn.title = hasCustom ? '打开并编辑自定义歌词' : '新增自定义歌词';
+    customBtn.title = hasCustom ? 'Open and edit custom lyrics' : 'Add custom lyrics';
   }
 }
 function currentLyricSourceLabel() {
-  if (lyricSourceMode === 'custom') return '自定义歌词';
-  return lyricsTimingSource === 'fallback' ? '占位歌词' : '原词';
+  if (lyricSourceMode === 'custom') return 'Custom Lyrics';
+  return lyricsTimingSource === 'fallback' ? 'Placeholder Lyrics' : 'Original';
 }
 function setCustomLyricStatus(text, tone) {
   var el = document.getElementById('custom-lyric-status');
@@ -17024,7 +17024,7 @@ function setCustomLyricStatus(text, tone) {
 function openCustomLyricModal() {
   var song = currentLyricSong();
   if (!song) {
-    showToast('先播放或选择一首歌');
+    showToast('Play or select a song first');
     return;
   }
   if (immersiveMode) setImmersiveMode(false);
@@ -17032,10 +17032,10 @@ function openCustomLyricModal() {
   var title = document.getElementById('custom-lyric-title');
   var sub = document.getElementById('custom-lyric-sub');
   var input = document.getElementById('custom-lyric-input');
-  if (title) title.textContent = song.name || '当前歌曲';
-  if (sub) sub.textContent = (songDisplaySubtitle(song) || '') + (entry ? ' · 已保存自定义歌词' : ' · 可粘贴 LRC 或逐行输入');
+  if (title) title.textContent = song.name || 'Current Song';
+  if (sub) sub.textContent = (songDisplaySubtitle(song) || '') + (entry ? ' · Custom lyrics saved' : ' · Paste LRC or enter line by line');
   if (input) input.value = entry ? (entry.text || '') : '';
-  setCustomLyricStatus(entry ? '已读取本地自定义歌词' : '提示：带 [00:12.00] 时间轴会更精准；纯文本会自动铺开', entry ? 'good' : '');
+  setCustomLyricStatus(entry ? 'Local custom lyrics loaded' : 'Tip: [00:12.00] timestamps improve accuracy; plain text will spread automatically', entry ? 'good' : '');
   openGsapModal(document.getElementById('custom-lyric-modal'));
   setTimeout(function(){ if (input) input.focus(); }, 120);
 }
@@ -17048,8 +17048,8 @@ function saveCustomLyricForCurrent() {
   var input = document.getElementById('custom-lyric-input');
   var text = input ? String(input.value || '').trim() : '';
   if (!song || !key) {
-    setCustomLyricStatus('请先播放或选择一首歌', 'fail');
-    showToast('先播放或选择一首歌');
+    setCustomLyricStatus('Play or select a song first', 'fail');
+    showToast('Play or select a song first');
     return;
   }
   if (!text) {
@@ -17058,7 +17058,7 @@ function saveCustomLyricForCurrent() {
   }
   var lines = parseCustomLyricText(text);
   if (!lines.length) {
-    setCustomLyricStatus('没有识别到可显示的歌词行', 'fail');
+    setCustomLyricStatus('No displayable lyric lines found', 'fail');
     return;
   }
   customLyricMap[key] = { text: text, updatedAt: Date.now() };
@@ -17066,19 +17066,19 @@ function saveCustomLyricForCurrent() {
   var saved = saveCustomLyricMap();
   saveCustomLyricPrefs();
   applyCustomLyricState(song, true);
-  setCustomLyricStatus(saved ? ('已保存 ' + lines.length + ' 行，并切换为自定义歌词') : '已应用，但本地存储空间不足', saved ? 'good' : 'fail');
-  showToast(saved ? '自定义歌词已保存' : '自定义歌词已应用');
+  setCustomLyricStatus(saved ? ('Saved ' + lines.length + ' lines, switched to custom lyrics') : 'Applied, but local storage insufficient', saved ? 'good' : 'fail');
+  showToast(saved ? 'Custom lyrics saved' : 'Custom lyrics applied');
   setTimeout(function(){ closeCustomLyricModal(); }, 520);
 }
 function deleteCustomLyricForCurrent() {
   var song = currentLyricSong();
   var key = songCustomLyricKey(song);
   if (!song || !key) {
-    setCustomLyricStatus('请先播放或选择一首歌', 'fail');
+    setCustomLyricStatus('Play or select a song first', 'fail');
     return;
   }
   if (!customLyricMap[key]) {
-    setCustomLyricStatus('当前歌曲没有自定义歌词', 'fail');
+    setCustomLyricStatus('No custom lyrics for current song', 'fail');
     return;
   }
   delete customLyricMap[key];
@@ -17088,8 +17088,8 @@ function deleteCustomLyricForCurrent() {
   applyOriginalLyricsState();
   var input = document.getElementById('custom-lyric-input');
   if (input) input.value = '';
-  setCustomLyricStatus('已删除，恢复原歌词', 'good');
-  showToast('已恢复原歌词');
+  setCustomLyricStatus('Deleted, restored original lyrics', 'good');
+  showToast('Original lyrics restored');
 }
 function isCloudSong(song) {
   return false;
@@ -17098,7 +17098,7 @@ function isSongLiked(song) {
   return !!(song && song.id && likedSongMap[String(song.id)]);
 }
 function ensureLoggedInForAction() {
-  showToast('本地播放器不使用账号同步');
+  showToast('Local player does not use account sync');
   return false;
 }
 function updateLikeButtons(song) {
@@ -17109,7 +17109,7 @@ function updateLikeButtons(song) {
   if (btn) {
     btn.classList.toggle('liked', liked);
     btn.classList.toggle('busy', busy);
-    btn.title = liked ? '取消红心' : '红心喜欢';
+    btn.title = liked ? 'Unlike' : 'Like';
   }
   var collectBtn = document.getElementById('collect-btn');
   if (collectBtn) collectBtn.classList.toggle('busy', collectBusy);
@@ -17129,7 +17129,7 @@ function artistNextPlusIconSvg() {
 function songActionHtml(kind, source, index, song) {
   var liked = isSongLiked(song);
   if (kind === 'like') {
-    return '<button class="song-action-btn' + (liked ? ' liked' : '') + '" title="' + (liked ? '取消红心' : '红心喜欢') + '" onclick="event.stopPropagation();toggleLike' + source + '(' + index + ')">' + heartIconSvg() + '</button>';
+    return '<button class="song-action-btn' + (liked ? ' liked' : '') + '" title="' + (liked ? 'Unlike' : 'Like') + '" onclick="event.stopPropagation();toggleLike' + source + '(' + index + ')">' + heartIconSvg() + '</button>';
   }
   return '<button class="song-action-btn" title="Add to Playlist" onclick="event.stopPropagation();collect' + source + '(' + index + ')">' + playlistPlusIconSvg() + '</button>';
 }
@@ -17162,18 +17162,18 @@ function refreshSearchResultActionStates() {
     var song = playlist[i];
     var liked = isSongLiked(song);
     btn.classList.toggle('liked', liked);
-    btn.title = liked ? '取消红心' : '红心喜欢';
+    btn.title = liked ? 'Unlike' : 'Like';
   });
 }
 async function toggleLikeSong(song) {
-  showToast('本地模式不使用红心同步');
+  showToast('Local mode does not use like sync');
 }
 function toggleLikeCurrent() { toggleLikeSong(currentCoverSong()); }
 function toggleLikeSearchResult(i) { if (playlist[i]) toggleLikeSong(playlist[i]); }
 function toggleLikeQueueIndex(i) { if (playQueue[i]) toggleLikeSong(playQueue[i]); }
 function toggleLikeDetailSong(song) { toggleLikeSong(song); }
 function openCollectModal(song) {
-  showToast('本地播放器不使用在线歌单收藏');
+  showToast('Local player does not use online playlist saves');
 }
 function openCollectModalForCurrent() { openCollectModal(currentCoverSong()); }
 function collectSearchResult(i) { if (playlist[i]) openCollectModal(playlist[i]); }
@@ -17193,7 +17193,7 @@ function renderCollectModal() {
   var song = collectTargetSong || {};
   var cover = songCoverSrc(song, 80);
   current.innerHTML = (cover ? '<img src="' + cover + '" alt="">' : '<div class="cover-placeholder"></div>') +
-    '<div style="min-width:0"><div class="collect-title">' + escHtml(song.name || '当前歌曲') + '</div><div class="collect-sub">' + escHtml(songDisplaySubtitle(song)) + '</div></div>';
+    '<div style="min-width:0"><div class="collect-title">' + escHtml(song.name || 'Current Song') + '</div><div class="collect-sub">' + escHtml(songDisplaySubtitle(song)) + '</div></div>';
   if (!loginStatus.loggedIn) {
     list.innerHTML = '<div class="collect-empty">Sign in to see your playlists</div>';
     return;
@@ -17211,7 +17211,7 @@ function renderCollectModal() {
     var thumb = pl.cover ? coverUrlWithSize(pl.cover, 80) : '';
     return '<div class="collect-item" data-collect-pid="' + escHtml(String(pl.id || '')) + '" onclick="addCollectTargetToPlaylist(this.getAttribute(\'data-collect-pid\'))">' +
       (thumb ? '<img src="' + thumb + '" alt="">' : '<div class="cover-placeholder"></div>') +
-      '<div style="min-width:0"><div class="collect-title">' + escHtml(pl.name || '') + '</div><div class="collect-sub">' + (pl.trackCount || 0) + ' 首</div></div>' +
+      '<div style="min-width:0"><div class="collect-title">' + escHtml(pl.name || '') + '</div><div class="collect-sub">' + (pl.trackCount || 0) + ' tracks</div></div>' +
     '</div>';
   }).join('');
   if (window.gsap) animateListItems(list, '.collect-item', { x: 0, y: 6, stagger: 0.012, duration: 0.18, limit: 18 });
@@ -17224,16 +17224,16 @@ function setCollectBusyPid(pid, busy) {
   });
 }
 async function createPlaylistFromCollect() {
-  showToast('纯本地模式不创建在线歌单');
+  showToast('Local-only mode does not create online playlists');
 }
 function collectResultMessage(r) {
-  return '纯本地模式不使用在线收藏';
+  return 'Local-only mode does not use online saves';
 }
 async function verifySongInPlaylist(pid, songId) {
   return false;
 }
 async function addCollectTargetToPlaylist(pid) {
-  showToast('纯本地模式不使用在线收藏');
+  showToast('Local-only mode does not use online saves');
 }
 function cloneSong(song){ return hydrateCustomCover(Object.assign({}, song)); }
 function avatarSrc(url) {
@@ -17359,7 +17359,7 @@ $input.addEventListener('input', function(){
     renderLocalLibraryResults('');
     return;
   }
-  $results.innerHTML = '<div class="search-empty">正在搜索 “' + escHtml(q) + '”…</div>';
+  $results.innerHTML = '<div class=”search-empty”>Searching for “' + escHtml(q) + '”…</div>';
   $results.classList.add('show');
   searchTimer = setTimeout(function(){ doSearch(q); }, 180);
 });
@@ -17479,7 +17479,7 @@ function renderLocalLibraryResults(q, opts) {
   if (!pool.length) {
     playlist = [];
     searchLastResultQuery = '';
-    $results.innerHTML = '<div class="search-empty">还没有本地音乐。<br><button class="fx-mini-btn ghost" type="button" onclick="openLocalFolderImport()">导入本地音乐文件夹</button></div>';
+    $results.innerHTML = '<div class="search-empty">No local music yet.<br><button class="fx-mini-btn ghost" type="button" onclick="openLocalFolderImport()">Import Local Music Folder</button></div>';
     $results.classList.add('show');
     return;
   }
@@ -17487,7 +17487,7 @@ function renderLocalLibraryResults(q, opts) {
   if (!songs.length) {
     playlist = [];
     searchLastResultQuery = '';
-    $results.innerHTML = '<div class="search-empty">本地库里没有找到相关歌曲</div>';
+    $results.innerHTML = '<div class="search-empty">No matching songs found in local library</div>';
     $results.classList.add('show');
     return;
   }
@@ -17535,7 +17535,7 @@ async function doSearch(q, opts) {
     if (!songs.length) {
       playlist = [];
       searchLastResultQuery = '';
-      $results.innerHTML = '<div class="search-empty">本地库里没有找到相关歌曲</div>';
+      $results.innerHTML = '<div class="search-empty">No matching songs found in local library</div>';
       $results.classList.add('show');
       return;
     }
@@ -17805,7 +17805,7 @@ function setVolume(value, silent) {
   setPersistentLocalStorageItem('apex-player-volume', String(next));
   applyVolumeToAudio();
   updateVolumeUi();
-  if (!silent) showToast('音量 ' + Math.round(next * 100) + '%');
+  if (!silent) showToast('Volume ' + Math.round(next * 100) + '%');
 }
 function adjustVolumeByKeyboard(delta) {
   var step = Number(delta) || 0;
@@ -17847,7 +17847,7 @@ function bindVolumeControls() {
     slider.addEventListener('input', function(){ setVolume(slider.value, true); });
     slider.addEventListener('focus', keepVolumePanelOpen);
     slider.addEventListener('blur', closeVolumePanelSoon);
-    slider.addEventListener('change', function(){ showToast('音量 ' + Math.round(targetVolume * 100) + '%'); });
+    slider.addEventListener('change', function(){ showToast('Volume ' + Math.round(targetVolume * 100) + '%'); });
   }
   if (btn) {
     btn.addEventListener('dblclick', function(e){ e.stopPropagation(); toggleMute(); });
@@ -17969,7 +17969,7 @@ function restorePlaybackSessionForLocalLibrary(songs, folderPath) {
   playing = false;
   setPlayIcon(false);
   forcePlaybackControlsInteractive();
-  showToast('已恢复上次播放位置');
+  showToast('Last playback position restored');
   return true;
 }
 function queueSong(song, opts) {
@@ -18008,19 +18008,19 @@ function queueSongNext(song) {
 function queueSearchResult(i) {
   var song = playlist[i]; if (!song) return;
   queueSongNext(song);
-  showToast('已设为下一首: ' + song.name);
+  showToast('Set as next: ' + song.name);
 }
 function queueDetailSongNext(song) {
   if (!song || song.type === 'podcast-radio') return;
   queueSongNext(song);
-  showToast('已设为下一首: ' + (song.name || ''));
+  showToast('Set as next: ' + (song.name || ''));
 }
 function queueIndexNext(i) {
   i = Number(i);
   if (!isFinite(i) || i < 0 || i >= playQueue.length) return;
   var song = playQueue[i];
   queueSongNext(song);
-  showToast('已设为下一首: ' + (song && song.name ? song.name : ''));
+  showToast('Set as next: ' + (song && song.name ? song.name : ''));
 }
 function openQueueArtist(i) {
   var song = playQueue && playQueue[i];
@@ -18066,7 +18066,7 @@ function showSourceFallbackNotice(title, body) {
   var titleEl = document.getElementById('source-fallback-title');
   var bodyEl = document.getElementById('source-fallback-body');
   if (!notice || !titleEl || !bodyEl) return;
-  titleEl.textContent = title || '自动换源';
+  titleEl.textContent = title || 'Auto Source Switch';
   bodyEl.textContent = body || '';
   notice.classList.add('show');
   if (sourceFallbackNoticeTimer) clearTimeout(sourceFallbackNoticeTimer);
@@ -18089,15 +18089,15 @@ function skipFailedQueueItem(idx, token, message) {
   if (token !== trackSwitchToken) return;
   markQueueItemPlaybackFailed(idx);
   if (playQueue.length <= 1) {
-    showSourceFallbackNotice('没有可跳过的下一首', message || '当前歌曲不可播放，队列里没有其他歌曲。');
+    showSourceFallbackNotice('No next track to skip to', message || 'Current song is unplayable and there are no other songs in the queue.');
     return;
   }
   var nextIdx = nextUnblockedQueueIndex(idx);
   if (nextIdx < 0) {
-    showSourceFallbackNotice('队列暂时没有可播歌曲', '已尝试跳过异常歌曲，当前队列没有新的可播放项。');
+    showSourceFallbackNotice('No playable tracks in queue', 'Tried to skip failed track, but no new playable items in queue.');
     return;
   }
-  showSourceFallbackNotice('已跳过异常歌曲', message || '当前本地文件不可播放，正在播放下一首。');
+  showSourceFallbackNotice('Skipped failed track', message || 'Current local file is unplayable, playing next track.');
   currentIdx = nextIdx;
   playQueueAt(nextIdx, { fallbackDepth: 0 });
 }
@@ -18141,8 +18141,8 @@ function safePlaybackStep(label, fn) {
 }
 
 function playbackFailureToastText(err) {
-  if (isPlaybackRecursionError(err)) return '播放准备异常，已保持播放器可操作';
-  return '播放失败: ' + (err && err.message ? err.message : err);
+  if (isPlaybackRecursionError(err)) return 'Playback setup error, player remains operable';
+  return 'Playback failed: ' + (err && err.message ? err.message : err);
 }
 function scheduleAudioResumePosition(media, seconds, token) {
   seconds = Math.max(0, Number(seconds) || 0);
@@ -18280,7 +18280,7 @@ function loadLocalLyricsForSong(song, token) {
 async function playLocalQueueItem(song, idx, opts, token, firstVisualPlay, bmKey, markPlayPhase) {
   markPlayPhase('local-source');
   var localUrl = ensureLocalSongUrl(song);
-  if (!localUrl) throw new Error('本地音频文件不可用');
+  if (!localUrl) throw new Error('Local audio file not available');
   currentLocalSong = song;
   applyLocalOriginalLyricsState(song);
   loadLocalLyricsForSong(song, token);
@@ -18342,7 +18342,7 @@ async function playLocalQueueItem(song, idx, opts, token, firstVisualPlay, bmKey
   var playbackStarted = await playAudio({ manual: !!opts.manual, silent: false });
   if (!playbackStarted) {
     forcePlaybackControlsInteractive();
-    showToast(opts.manual ? '本地音乐启动失败，请重新选择文件' : '歌曲已载入，点击播放按钮继续播放');
+    showToast(opts.manual ? 'Local music failed to start, please re-select the file' : 'Song loaded, click play to continue');
     return;
   }
   forcePlaybackControlsInteractive();
@@ -18382,7 +18382,7 @@ async function playQueueAt(idx, opts) {
     if (!song || song.type !== 'local') {
       hideLoading();
       forcePlaybackControlsInteractive();
-      showToast('纯本地播放器只播放本地音乐文件');
+      showToast('Local-only player plays local music files only');
       return;
     }
     markPlayPhase('local-metadata');
@@ -18427,7 +18427,7 @@ async function playQueueAt(idx, opts) {
     hideLoading();
     forcePlaybackControlsInteractive();
     if (!isPlaybackRecursionError(setupErr) && token === trackSwitchToken && !opts.manual && playQueue.length > 1) {
-      skipFailedQueueItem(idx, token, '当前歌曲切换失败，正在尝试队列里的下一首。');
+      skipFailedQueueItem(idx, token, 'Track switch failed, trying next in queue.');
       return;
     }
     showToast(playbackFailureToastText(setupErr));
@@ -18461,7 +18461,7 @@ async function attemptAudioPlay(opts) {
     playing = false; setPlayIcon(false);
     hideLoading();
     forcePlaybackControlsInteractive();
-    if (!opts.silent) showToast(opts.manual ? '播放启动失败, 请重新选择歌曲' : '播放被系统拦截, 请点击播放按钮');
+    if (!opts.silent) showToast(opts.manual ? 'Playback failed to start, please re-select the song' : 'Playback blocked by browser, please click Play');
     return false;
   }
 }
@@ -18499,7 +18499,7 @@ async function togglePlay() {
     setPlayIcon(playing);
     hideLoading();
     forcePlaybackControlsInteractive();
-    if (!audio || !audio.src) showToast('播放控制失败');
+    if (!audio || !audio.src) showToast('Playback control failed');
   } finally {
     playToggleBusy = false;
   }
@@ -19003,10 +19003,10 @@ function toggleLyricsPanel(force) {
   else fx.particleLyrics = !fx.particleLyrics;
   if (fx.particleLyrics) {
     createLyricsParticles();
-    showToast('歌词已开启');
+    showToast('Lyrics enabled');
   } else {
     clearStageLyrics();
-    showToast('歌词已关闭');
+    showToast('Lyrics disabled');
   }
   lyricsVisible = fx.particleLyrics;
 }
@@ -19150,14 +19150,14 @@ function applyPlaylistPanelPinState(openPanel) {
   }
   if (btn) {
     btn.classList.toggle('active', !!playlistPanelPinned);
-    btn.title = playlistPanelPinned ? '取消常开歌单' : 'Pinned Playlist';
+    btn.title = playlistPanelPinned ? 'Unpin Playlist' : 'Pin Playlist';
   }
 }
 function setPlaylistPanelPinned(on, silent) {
   playlistPanelPinned = !!on;
   saveBooleanPreference(PLAYLIST_PANEL_PIN_STORE_KEY, playlistPanelPinned);
   applyPlaylistPanelPinState(playlistPanelPinned);
-  if (!silent) showToast(playlistPanelPinned ? '左侧歌单已常开' : '左侧歌单已恢复自动隐藏');
+  if (!silent) showToast(playlistPanelPinned ? 'Playlist panel pinned' : 'Playlist panel auto-hide restored');
 }
 function togglePlaylistPanelPinned() {
   setPlaylistPanelPinned(!playlistPanelPinned);
@@ -19226,7 +19226,7 @@ function renderMiniQueuePanel(opts) {
   var $count = document.getElementById('mini-queue-count');
   if (!$list || !$count) return;
   var total = playQueue.length;
-  $count.textContent = total ? (total + ' 首' + (currentIdx >= 0 ? ' · 正在播放 ' + (currentIdx + 1) : '')) : '0 tracks';
+  $count.textContent = total ? (total + ' tracks' + (currentIdx >= 0 ? ' · Now playing ' + (currentIdx + 1) : '')) : '0 tracks';
   if (!miniQueueOpen && !opts.animate && !opts.scrollCurrent) return;
   syncQueueRenderLimits(opts);
   if (!total) {
@@ -19243,14 +19243,14 @@ function renderMiniQueuePanel(opts) {
     return '<div class="mini-queue-item' + (i === currentIdx ? ' now' : '') + '" onclick="playQueueAt(' + i + ')">' +
       imgTag +
       '<div class="mini-queue-info"><div class="mini-queue-name">' + escHtml(song.name) + '</div><div class="mini-queue-sub">' + escHtml(sub) + '</div></div>' +
-      '<button class="mini-queue-remove mini-queue-next" onclick="event.stopPropagation();queueIndexNext(' + i + ')" title="Play Next">下</button>' +
+      '<button class="mini-queue-remove mini-queue-next" onclick="event.stopPropagation();queueIndexNext(' + i + ')" title="Play Next">▶</button>' +
       '<button class="mini-queue-remove" onclick="event.stopPropagation();removeFromQueue(' + i + ')" title="Remove">×</button>' +
     '</div>';
   }).join('');
   var currentHint = hiddenCurrentQueueHintHtml(renderLimit, true);
   if (currentHint) $list.insertAdjacentHTML('beforeend', currentHint);
   if (total > renderLimit) {
-    $list.insertAdjacentHTML('beforeend', '<button type="button" class="fx-mini-btn ghost queue-load-more mini-queue-load-more" data-mini-queue-load-more="1">加载更多 ' + renderLimit + '/' + total + '</button>');
+    $list.insertAdjacentHTML('beforeend', '<button type="button" class="fx-mini-btn ghost queue-load-more mini-queue-load-more" data-mini-queue-load-more="1">Load more ' + renderLimit + '/' + total + '</button>');
   }
   if (opts.animate || opts.scrollCurrent) {
     requestAnimationFrame(function(){
@@ -19327,9 +19327,9 @@ function resetMiniQueueRenderLimit() {
 }
 function hiddenCurrentQueueHintHtml(renderLimit, mini) {
   if (currentIdx < renderLimit || currentIdx < 0 || currentIdx >= playQueue.length) return '';
-  var label = '正在播放第 ' + (currentIdx + 1) + ' 首';
+  var label = 'Now playing #' + (currentIdx + 1);
   var attr = mini ? 'data-mini-queue-jump-current="1"' : 'data-queue-jump-current="1"';
-  return '<button type="button" class="fx-mini-btn ghost queue-load-more queue-current-hint" ' + attr + '>' + label + ' · 定位</button>';
+  return '<button type="button" class="fx-mini-btn ghost queue-load-more queue-current-hint" ' + attr + '>' + label + ' · Jump</button>';
 }
 function queueItemHtml(song, i) {
   var thumb = songCoverSrc(song, 60);
@@ -19338,15 +19338,15 @@ function queueItemHtml(song, i) {
   var sub = songDisplaySubtitle(song);
   var subHtml = song.type === 'local'
     ? escHtml(sub)
-    : '<button class="queue-artist-link" type="button" onclick="event.stopPropagation();openQueueArtist(' + i + ')">' + escHtml(artist || '未知歌手') + '</button>' + (song.album ? (' · ' + escHtml(song.album)) : '');
+    : '<button class="queue-artist-link" type="button" onclick="event.stopPropagation();openQueueArtist(' + i + ')">' + escHtml(artist || 'Unknown Artist') + '</button>' + (song.album ? (' · ' + escHtml(song.album)) : '');
   var actionsHtml = LOCAL_ONLY_MODE
     ? '<div class="qi-act">' +
-      '<button class="queue-next" onclick="event.stopPropagation();queueIndexNext(' + i + ')" title="Play Next">下</button>' +
+      '<button class="queue-next" onclick="event.stopPropagation();queueIndexNext(' + i + ')" title="Play Next">▶</button>' +
       '<button onclick="event.stopPropagation();removeFromQueue(' + i + ')" title="Remove">×</button>' +
       '</div>'
     : '<div class="qi-act">' +
-      '<button class="' + (isSongLiked(song) ? 'liked' : '') + '" onclick="event.stopPropagation();toggleLikeQueueIndex(' + i + ')" title="' + (isSongLiked(song) ? '取消红心' : '红心喜欢') + '">' + heartIconSvg() + '</button>' +
-      '<button class="queue-next" onclick="event.stopPropagation();queueIndexNext(' + i + ')" title="Play Next">下</button>' +
+      '<button class="' + (isSongLiked(song) ? 'liked' : '') + '" onclick="event.stopPropagation();toggleLikeQueueIndex(' + i + ')" title="' + (isSongLiked(song) ? 'Unlike' : 'Like') + '">' + heartIconSvg() + '</button>' +
+      '<button class="queue-next" onclick="event.stopPropagation();queueIndexNext(' + i + ')" title="Play Next">▶</button>' +
       '<button onclick="event.stopPropagation();collectQueueIndex(' + i + ')" title="Add to Playlist">' + playlistPlusIconSvg() + '</button>' +
       '<button onclick="event.stopPropagation();removeFromQueue(' + i + ')" title="Remove">×</button>' +
       '</div>';
@@ -19446,7 +19446,7 @@ function renderQueuePanel(opts) {
   var currentHint = hiddenCurrentQueueHintHtml(renderLimit, false);
   if (currentHint) $ql.insertAdjacentHTML('beforeend', currentHint);
   if (playQueue.length > renderLimit) {
-    $ql.insertAdjacentHTML('beforeend', '<button type="button" class="fx-mini-btn ghost queue-load-more" data-queue-load-more="1">加载更多 ' + renderLimit + '/' + playQueue.length + '</button>');
+    $ql.insertAdjacentHTML('beforeend', '<button type="button" class="fx-mini-btn ghost queue-load-more" data-queue-load-more="1">Load more ' + renderLimit + '/' + playQueue.length + '</button>');
   }
   if (opts.animate && seq === queueRenderSeq) {
     animateVisiblePanelList($ql, '.queue-item', document.getElementById('playlist-panel'), '.queue-item.now', { scrollActive: opts.scrollCurrent !== false });
@@ -19482,14 +19482,14 @@ function playlistPanelDetailHtml(pl, provider) {
         return '<div class="pl-detail-row" data-pl-detail-row="' + i + '">' +
           imgTag +
           '<div style="flex:1;min-width:0"><div class="pl-detail-row-title">' + escHtml(song.name || '') + '</div>' +
-          '<button type="button" class="pl-detail-row-artist" data-pl-detail-artist="' + i + '">' + escHtml(song.artist || '未知歌手') + '</button></div>' +
+          '<button type="button" class="pl-detail-row-artist" data-pl-detail-artist="' + i + '">' + escHtml(song.artist || 'Unknown Artist') + '</button></div>' +
         '</div>';
       }).join('');
   if (!loading && !rows) rows = '<div style="text-align:center;padding:14px 0;color:rgba(255,255,255,.30);font-size:11.5px">No playable songs in this playlist</div>';
   if (!loading && tracks.length > renderLimit) {
     rows += '<button type="button" class="fx-mini-btn ghost pl-detail-load-more" data-pl-detail-load-more="1">Load more ' + renderLimit + '/' + tracks.length + '</button>';
   } else if (!loading && tracks.length > PLAYLIST_DETAIL_INITIAL_RENDER) {
-    rows += '<div class="pl-detail-progress">All shown: ' + tracks.length + ' 首</div>';
+    rows += '<div class="pl-detail-progress">All shown: ' + tracks.length + ' tracks</div>';
   }
   return '<div class="pl-inline-detail" data-pl-detail="' + escHtml(key) + '">' +
     '<div class="pl-detail-sticky">' +
