@@ -70,6 +70,8 @@ const CHROMIUM_PERFORMANCE_SWITCHES = [
   ['disable-renderer-backgrounding'],
   ['disable-backgrounding-occluded-windows'],
   ['force_high_performance_gpu'],
+  ['use-gl', 'egl'],
+  ['disable-vulkan'],
   // ['use-angle', 'd3d11'], // Windows only
 ];
 for (const [name, value] of CHROMIUM_PERFORMANCE_SWITCHES) {
