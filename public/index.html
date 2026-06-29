@@ -25165,10 +25165,14 @@ async function startTrackDownload() {
       log.scrollTop = log.scrollHeight;
     });
   }
+  var logText = '';
   var result = await api.downloadTrack(query, dir || undefined);
   if (_downloadProgressUnlisten) { _downloadProgressUnlisten(); _downloadProgressUnlisten = null; }
+  if (log) logText = log.textContent || '';
   if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
-  if (result && result.ok) {
+  var hasError = !result || !result.ok
+    || /no results found|lookuperror|error|failed|couldn't/i.test(logText);
+  if (!hasError) {
     if (log) log.textContent += '\n✓ Done! Rescanning library…\n';
     showToast('Download complete — refreshing library');
     if (dir && typeof api.scanLocalMusicFolder === 'function') {
@@ -25180,8 +25184,8 @@ async function startTrackDownload() {
       } catch(e) { console.warn('[Download rescan]', e); }
     }
   } else {
-    if (log) log.textContent += '\n✗ Download failed (exit code ' + (result && result.code) + ')\n';
-    showToast('Download failed — check log');
+    if (log) log.textContent += '\n✗ Not found or download failed — try a different search query\n';
+    showToast('Download failed — song not found on Spotify');
   }
 }
 
