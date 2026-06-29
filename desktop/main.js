@@ -1384,7 +1384,10 @@ ipcMain.handle('mineradio-download-track', async (event, query, outputDir) => {
     const sendLine = (line) => {
       try { event.sender.send('mineradio-download-progress', line); } catch (_) {}
     };
-    const proc = spawn('spotdl', ['download', query, '--output', dir, '--generate-lrc'], {
+    const isYouTubeUrl = /youtube\.com|youtu\.be/.test(query);
+    const args = ['download', query, '--output', dir, '--generate-lrc'];
+    if (isYouTubeUrl) args.push('--audio-provider', 'youtube');
+    const proc = spawn('spotdl', args, {
       env: { ...process.env },
     });
     proc.stdout.on('data', (chunk) => chunk.toString().split('\n').filter(Boolean).forEach(sendLine));
