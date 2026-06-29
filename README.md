@@ -2,6 +2,10 @@
 
 A local music player fork of [Mineradio](https://github.com/XxHuberrr/Mineradio) adapted for Linux with an English UI, offline-only mode, and integrated track downloading via spotDL.
 
+| | |
+|---|---|
+| ![Splash](docs/screenshot-splash.png) | ![Player](docs/screenshot-player.png) |
+
 **Original project**: [XxHuberrr/Mineradio](https://github.com/XxHuberrr/Mineradio)  
 **Base fork**: [oirge/Mineradio](https://github.com/oirge/Mineradio) (local player v1.1.5)  
 **License**: GPL v3
