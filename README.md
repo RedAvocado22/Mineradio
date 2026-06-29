@@ -1,41 +1,119 @@
 # Mineradio Local Player
 
-这是基于 Mineradio 二次修改的本地音乐播放器版本，已改为纯本地播放使用。
+A local music player fork of [Mineradio](https://github.com/XxHuberrr/Mineradio) adapted for Linux with an English UI, offline-only mode, and integrated track downloading via spotDL.
 
-原项目地址：[XxHuberrr/Mineradio](https://github.com/XxHuberrr/Mineradio)
+**Original project**: [XxHuberrr/Mineradio](https://github.com/XxHuberrr/Mineradio)  
+**Base fork**: [oirge/Mineradio](https://github.com/oirge/Mineradio) (local player v1.1.5)  
+**License**: GPL v3
 
-## 主要改动
+---
 
-- 删除登录、在线音乐入口、更新提示和无用引导。
-- 支持导入本地音乐文件夹。
-- 支持单独导入本地音乐文件。
-- 支持 MP3 / FLAC 播放。
-- 支持同名 `.lrc` / `.txt` 歌词。
-- 支持 FLAC 内嵌 `LYRICS` 歌词标签，包括带时间轴的 LRC 歌词。
-- 支持同目录封面图片和音频内嵌封面。
-- 移除本地节奏分析环节。
+## Changes from upstream
 
-## 使用
+### Linux support
+- Launcher script at `~/.local/bin/mineradio` — sets NVM PATH before starting Electron so Node.js resolves correctly
+- `.desktop` file at `~/.local/share/applications/mineradio.desktop` for app menu integration
+- Works on Wayland (Hyprland tested)
+
+### UI
+- Full English translation (was Simplified Chinese)
+- Font changed to **Outfit** (was Noto Sans SC)
+- Login popup disabled on startup
+- `LOCAL_ONLY_MODE = true` — hides all online music features, no account required
+
+### Download panel
+- New **Download Track** button in the toolbar (⊙ icon)
+- Enter song name + artist → downloads MP3 + synced LRC lyrics via **spotDL**
+- Progress log shown in real time inside the app
+- Library auto-refreshes after download completes
+
+---
+
+## Requirements
+
+- Node.js (via [nvm](https://github.com/nvm-sh/nvm))
+- Python 3 + [spotDL](https://github.com/spotDL/spotify-downloader) for the download feature:
+  ```bash
+  pip install spotdl
+  ```
+
+---
+
+## Running
 
 ```bash
 npm install
 npm start
 ```
 
-打包 Windows 安装包：
+### Linux launcher (recommended)
 
+Create `~/.local/bin/mineradio`:
+```bash
+#!/bin/bash
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+cd /path/to/Mineradio-local
+npm start &>/dev/null &
+```
+
+Make it executable: `chmod +x ~/.local/bin/mineradio`
+
+---
+
+## Music library
+
+The app scans a local folder recursively. Subfolders are treated as playlists.
+
+**Recommended folder structure:**
+```
+~/Music/
+  playlist-name/
+    01 - Song Title.mp3
+    01 - Song Title.lrc   ← synced lyrics (same filename stem)
+```
+
+LRC files with the same stem as an MP3 are auto-detected. Re-import the folder after adding new LRC files.
+
+---
+
+## Downloading music + lyrics
+
+### One-shot (recommended)
+
+Use the **Download Track** button in the app toolbar, or from terminal:
+
+```bash
+spotdl download "Song Title Artist Name" --output ~/Music --generate-lrc
+```
+
+This downloads MP3 with Spotify metadata (title, artist, album art) and generates a synced `.lrc` file in one step.
+
+### Fetching lyrics only (for existing MP3s)
+
+Install `syncedlyrics`:
+```bash
+pip install syncedlyrics
+```
+
+Run a search (searches Musixmatch, NetEase, Deezer, Lrclib):
+```python
+import syncedlyrics
+lrc = syncedlyrics.search("Song Title Artist", providers=["Musixmatch", "NetEase", "Deezer", "Lrclib"])
+```
+
+> **Note**: Timing may be off if your MP3 is a YouTube MV version (longer intro) vs the Spotify version spotDL downloads.
+
+---
+
+## Building
+
+Windows installer:
 ```bash
 npm run build:win
 ```
 
-打包产物位于 `dist/`。
-
-## 说明
-
-本仓库为本地播放器二改版本，主要面向个人本地音乐库播放，不提供在线音乐搜索、登录、会员音源或音乐内容分发能力。
-
-请自行确保导入和播放的音乐文件来源合法。
-
-## 授权
-
-本项目沿用原项目授权，详见 [LICENSE](./LICENSE)。
+Linux build:
+```bash
+npm run build:linux
+```

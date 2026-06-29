@@ -53,6 +53,13 @@ contextBridge.exposeInMainWorld('desktopWindow', {
   refreshLocalMusicFiles: (folderPath, files) => ipcRenderer.invoke('mineradio-local-music-refresh-entries', folderPath, files || []),
   readLocalFileRange: (filePath, start, end) => ipcRenderer.invoke('mineradio-local-file-read-range', filePath, start, end),
   readLocalFileDataUrl: (filePath) => ipcRenderer.invoke('mineradio-local-file-read-data-url', filePath),
+  downloadTrack: (query, outputDir) => ipcRenderer.invoke('mineradio-download-track', query, outputDir),
+  onDownloadProgress: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, line) => callback(line);
+    ipcRenderer.on('mineradio-download-progress', listener);
+    return () => ipcRenderer.removeListener('mineradio-download-progress', listener);
+  },
   onGlobalHotkey: (callback) => {
     if (typeof callback !== 'function') return () => {};
     const listener = (_event, payload) => callback(payload || {});

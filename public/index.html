@@ -1959,6 +1959,9 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
     <button id="upload-btn" class="icon-btn" onclick="document.getElementById('file-input').click()" title="Import Music File or Cover">
       <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     </button>
+    <button id="download-track-btn" class="icon-btn" onclick="openDownloadModal()" title="Download Track (spotDL)" aria-label="Download Track">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/><path d="M8 16h8"/><path d="M12 13v3"/></svg>
+    </button>
     <button id="folder-import-btn" class="icon-btn" onclick="openLocalFolderImport()" title="Import Local Music Folder" aria-label="Import Local Music Folder">
       <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 14h6"/><path d="M12 11v6"/></svg>
     </button>
@@ -2565,6 +2568,29 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
     <div id="collect-list" class="collect-list"></div>
     <div class="btn-row">
       <button class="modal-btn" onclick="closeCollectModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="download-track-modal" class="modal-mask" onclick="if(event.target===this)closeDownloadModal()">
+  <div class="modal" style="max-width:460px;text-align:left">
+    <h2 style="margin:0 0 18px;font-size:15px;font-weight:600;letter-spacing:.02em">Download Track</h2>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">Song + Artist</label>
+      <input id="download-query-input" type="text" placeholder="e.g. Đêm Tàn LEFT HAND" autocomplete="off"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px;font-family:inherit;outline:none"
+        onkeydown="if(event.key==='Enter')startTrackDownload()">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">Output Folder</label>
+      <input id="download-dir-input" type="text" autocomplete="off"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;font-family:inherit;outline:none">
+    </div>
+    <div id="download-log" hidden
+      style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.65);max-height:180px;overflow-y:auto;margin-bottom:14px;white-space:pre-wrap;word-break:break-all"></div>
+    <div class="btn-row">
+      <button class="modal-btn" onclick="closeDownloadModal()">Close</button>
+      <button id="download-start-btn" class="modal-btn primary" onclick="startTrackDownload()">Download</button>
     </div>
   </div>
 </div>
@@ -25094,6 +25120,68 @@ function showToast(msg) {
   t.classList.add('show');
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+
+var _downloadProgressUnlisten = null;
+function openDownloadModal() {
+  var modal = document.getElementById('download-track-modal');
+  if (!modal) return;
+  var dirInput = document.getElementById('download-dir-input');
+  if (dirInput && !dirInput.value) {
+    var saved = localStorage.getItem('mineradio-local-library-folder-v1');
+    try { var parsed = JSON.parse(saved); dirInput.value = (parsed && parsed.path) ? parsed.path : (window.__os_homedir || '') + '/Music'; }
+    catch(_) { dirInput.value = '/home/' + (location.hostname || 'cuong') + '/Music'; }
+  }
+  var log = document.getElementById('download-log');
+  if (log) { log.textContent = ''; log.hidden = true; }
+  modal.classList.add('show');
+  setTimeout(function(){ var q = document.getElementById('download-query-input'); if(q) q.focus(); }, 80);
+}
+function closeDownloadModal() {
+  var modal = document.getElementById('download-track-modal');
+  if (modal) modal.classList.remove('show');
+  if (_downloadProgressUnlisten) { _downloadProgressUnlisten(); _downloadProgressUnlisten = null; }
+}
+async function startTrackDownload() {
+  var api = desktopLocalMusicApi();
+  if (!api || typeof api.downloadTrack !== 'function') {
+    showToast('Download not available (desktop only)');
+    return;
+  }
+  var query = (document.getElementById('download-query-input') || {}).value || '';
+  var dir = (document.getElementById('download-dir-input') || {}).value || '';
+  query = query.trim(); dir = dir.trim();
+  if (!query) { showToast('Enter song name + artist'); return; }
+  var log = document.getElementById('download-log');
+  var btn = document.getElementById('download-start-btn');
+  if (log) { log.textContent = ''; log.hidden = false; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Downloading…'; }
+  if (_downloadProgressUnlisten) { _downloadProgressUnlisten(); _downloadProgressUnlisten = null; }
+  if (typeof api.onDownloadProgress === 'function') {
+    _downloadProgressUnlisten = api.onDownloadProgress(function(line) {
+      if (!log) return;
+      log.textContent += line + '\n';
+      log.scrollTop = log.scrollHeight;
+    });
+  }
+  var result = await api.downloadTrack(query, dir || undefined);
+  if (_downloadProgressUnlisten) { _downloadProgressUnlisten(); _downloadProgressUnlisten = null; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
+  if (result && result.ok) {
+    if (log) log.textContent += '\n✓ Done! Rescanning library…\n';
+    showToast('Download complete — refreshing library');
+    if (dir && typeof api.scanLocalMusicFolder === 'function') {
+      try {
+        var scan = await api.scanLocalMusicFolder(dir);
+        if (scan && scan.ok && scan.files) {
+          await handleLocalFolderFiles(scan.files, { folderOnly: true, folderPath: scan.folderPath || dir, persist: true, autoPlay: false });
+        }
+      } catch(e) { console.warn('[Download rescan]', e); }
+    }
+  } else {
+    if (log) log.textContent += '\n✗ Download failed (exit code ' + (result && result.code) + ')\n';
+    showToast('Download failed — check log');
+  }
 }
 
 var visualGuideSteps = [
