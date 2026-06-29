@@ -25129,8 +25129,9 @@ function openDownloadModal() {
   var dirInput = document.getElementById('download-dir-input');
   if (dirInput && !dirInput.value) {
     var saved = localStorage.getItem('mineradio-local-library-folder-v1');
-    try { var parsed = JSON.parse(saved); dirInput.value = (parsed && parsed.path) ? parsed.path : (window.__os_homedir || '') + '/Music'; }
-    catch(_) { dirInput.value = '/home/' + (location.hostname || 'cuong') + '/Music'; }
+    var homedir = (desktopLocalMusicApi() && desktopLocalMusicApi().homedir) ? desktopLocalMusicApi().homedir() : '';
+    try { var parsed = JSON.parse(saved); dirInput.value = (parsed && parsed.path) ? parsed.path : homedir + '/Music'; }
+    catch(_) { dirInput.value = homedir + '/Music'; }
   }
   var log = document.getElementById('download-log');
   if (log) { log.textContent = ''; log.hidden = true; }
