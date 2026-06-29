@@ -1386,7 +1386,7 @@ ipcMain.handle('mineradio-download-track', async (event, query, outputDir) => {
     };
     const isYouTubeUrl = /youtube\.com|youtu\.be/.test(query);
     const args = ['download', query, '--output', dir, '--generate-lrc'];
-    if (isYouTubeUrl) args.push('--audio-provider', 'youtube');
+    if (isYouTubeUrl) args.push('--audio', 'youtube');
     const proc = spawn('spotdl', args, {
       env: { ...process.env },
     });
