@@ -25184,7 +25184,7 @@ async function startTrackDownload() {
   if (log) logText = log.textContent || '';
   if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
   var hasError = !result || !result.ok
-    || /no results found|lookuperror|error|failed|couldn't/i.test(logText);
+    || (!useYtdl && /no results found|lookuperror/i.test(logText));
   if (!hasError) {
     if (log) log.textContent += '\n✓ Done! Rescanning library…\n';
     showToast('Download complete — refreshing library');
