@@ -23,7 +23,8 @@ A local music player fork of [Mineradio](https://github.com/XxHuberrr/Mineradio)
 
 ### Download panel
 - New **Download Track** button in the toolbar (⊙ icon)
-- Enter song name + artist → downloads MP3 + synced LRC lyrics via **spotDL**
+- **YouTube Link** field → downloads via `yt-dlp` + searches lyrics with `syncedlyrics` (works for any YouTube video)
+- **Song + Artist** field → downloads via `spotDL` (best for songs on Spotify — includes metadata + album art)
 - Progress log shown in real time inside the app
 - Library auto-refreshes after download completes
 
@@ -33,7 +34,15 @@ A local music player fork of [Mineradio](https://github.com/XxHuberrr/Mineradio)
 
 - Node.js (via [nvm](https://github.com/nvm-sh/nvm))
 - Python 3 + pip (usually pre-installed on Linux)
-- [spotDL](https://github.com/spotDL/spotify-downloader) for the download feature:
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) for YouTube downloads:
+  ```bash
+  pip install yt-dlp
+  ```
+- [syncedlyrics](https://github.com/moehmeni/syncedlyrics) for fetching LRC from YouTube downloads:
+  ```bash
+  pip install syncedlyrics
+  ```
+- [spotDL](https://github.com/spotDL/spotify-downloader) for Spotify-based downloads:
 
 ```bash
 # Install spotDL
