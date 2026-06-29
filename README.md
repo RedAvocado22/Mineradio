@@ -32,10 +32,21 @@ A local music player fork of [Mineradio](https://github.com/XxHuberrr/Mineradio)
 ## Requirements
 
 - Node.js (via [nvm](https://github.com/nvm-sh/nvm))
-- Python 3 + [spotDL](https://github.com/spotDL/spotify-downloader) for the download feature:
-  ```bash
-  pip install spotdl
-  ```
+- Python 3 + pip (usually pre-installed on Linux)
+- [spotDL](https://github.com/spotDL/spotify-downloader) for the download feature:
+
+```bash
+# Install spotDL
+pip install spotdl
+
+# First run — downloads ffmpeg automatically
+spotdl --download-ffmpeg
+```
+
+> On some distros, use `pip3` instead of `pip`. If `spotdl` isn't found after install, add `~/.local/bin` to your PATH:
+> ```bash
+> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+> ```
 
 ---
 
