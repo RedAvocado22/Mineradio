@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('desktopWindow', {
   readLocalFileRange: (filePath, start, end) => ipcRenderer.invoke('mineradio-local-file-read-range', filePath, start, end),
   readLocalFileDataUrl: (filePath) => ipcRenderer.invoke('mineradio-local-file-read-data-url', filePath),
   homedir: () => require('os').homedir(),
+  downloadYtdl: (url, outputDir) => ipcRenderer.invoke('mineradio-download-ytdl', url, outputDir),
   downloadTrack: (query, outputDir) => ipcRenderer.invoke('mineradio-download-track', query, outputDir),
   onDownloadProgress: (callback) => {
     if (typeof callback !== 'function') return () => {};

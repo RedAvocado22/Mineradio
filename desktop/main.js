@@ -1377,6 +1377,22 @@ ipcMain.handle('mineradio-wallpaper-update', async (_event, payload) => {
   }
 });
 
+ipcMain.handle('mineradio-download-ytdl', async (event, url, outputDir) => {
+  const os = require('os');
+  const dir = outputDir || path.join(os.homedir(), 'Music');
+  const script = path.join(__dirname, '..', 'tools', 'ytdl_with_lyrics.py');
+  return new Promise((resolve) => {
+    const sendLine = (line) => {
+      try { event.sender.send('mineradio-download-progress', line); } catch (_) {}
+    };
+    const proc = spawn('python3', [script, url, dir], { env: { ...process.env } });
+    proc.stdout.on('data', (chunk) => chunk.toString().split('\n').filter(Boolean).forEach(sendLine));
+    proc.stderr.on('data', (chunk) => chunk.toString().split('\n').filter(Boolean).forEach(sendLine));
+    proc.on('close', (code) => resolve({ ok: code === 0, code }));
+    proc.on('error', (err) => resolve({ ok: false, error: err.message }));
+  });
+});
+
 ipcMain.handle('mineradio-download-track', async (event, query, outputDir) => {
   const os = require('os');
   const dir = outputDir || path.join(os.homedir(), 'Music');

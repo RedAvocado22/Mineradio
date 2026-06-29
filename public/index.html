@@ -2574,12 +2574,22 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
 
 <div id="download-track-modal" class="modal-mask" onclick="if(event.target===this)closeDownloadModal()">
   <div class="modal" style="max-width:460px;text-align:left">
-    <h2 style="margin:0 0 18px;font-size:15px;font-weight:600;letter-spacing:.02em">Download Track</h2>
+    <h2 style="margin:0 0 4px;font-size:15px;font-weight:600;letter-spacing:.02em">Download Track</h2>
+    <p style="margin:0 0 16px;font-size:11px;color:rgba(255,255,255,.35)">Fill one of the two fields below.</p>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">YouTube Link</label>
+      <input id="download-url-input" type="text" placeholder="https://youtube.com/watch?v=..." autocomplete="off"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;font-family:inherit;outline:none"
+        onkeydown="if(event.key==='Enter')startTrackDownload()">
+      <span style="font-size:10px;color:rgba(255,255,255,.28);margin-top:4px;display:block">Uses yt-dlp — works for any YouTube video</span>
+    </div>
+    <div style="margin-bottom:12px;text-align:center;font-size:11px;color:rgba(255,255,255,.25)">— or —</div>
     <div style="margin-bottom:12px">
       <label style="display:block;font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">Song + Artist</label>
       <input id="download-query-input" type="text" placeholder="e.g. Đêm Tàn LEFT HAND" autocomplete="off"
         style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px;font-family:inherit;outline:none"
         onkeydown="if(event.key==='Enter')startTrackDownload()">
+      <span style="font-size:10px;color:rgba(255,255,255,.28);margin-top:4px;display:block">Uses spotDL — best for songs on Spotify</span>
     </div>
     <div style="margin-bottom:16px">
       <label style="display:block;font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">Output Folder</label>
@@ -2587,7 +2597,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
         style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;font-family:inherit;outline:none">
     </div>
     <div id="download-log" hidden
-      style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.65);max-height:180px;overflow-y:auto;margin-bottom:14px;white-space:pre-wrap;word-break:break-all"></div>
+      style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.65);max-height:160px;overflow-y:auto;margin-bottom:14px;white-space:pre-wrap;word-break:break-all"></div>
     <div class="btn-row">
       <button class="modal-btn" onclick="closeDownloadModal()">Close</button>
       <button id="download-start-btn" class="modal-btn primary" onclick="startTrackDownload()">Download</button>
@@ -2830,7 +2840,7 @@ var HOTKEY_ACTIONS = [
 ];
 var hotkeyCaptureState = null;
 var hotkeyGlobalStatus = {};
-var diyPlayerMode = readDiyModePreference();
+var diyPlayerMode = false;
 var customCoverMap = readCustomCoverMap();
 var customLyricMap = readCustomLyricMap();
 var customLyricPrefs = readCustomLyricPrefs();
@@ -25149,10 +25159,11 @@ async function startTrackDownload() {
     showToast('Download not available (desktop only)');
     return;
   }
-  var query = (document.getElementById('download-query-input') || {}).value || '';
-  var dir = (document.getElementById('download-dir-input') || {}).value || '';
-  query = query.trim(); dir = dir.trim();
-  if (!query) { showToast('Enter song name + artist'); return; }
+  var url = ((document.getElementById('download-url-input') || {}).value || '').trim();
+  var query = ((document.getElementById('download-query-input') || {}).value || '').trim();
+  var dir = ((document.getElementById('download-dir-input') || {}).value || '').trim();
+  var useYtdl = !!url;
+  if (!url && !query) { showToast('Enter a YouTube link or song name'); return; }
   var log = document.getElementById('download-log');
   var btn = document.getElementById('download-start-btn');
   if (log) { log.textContent = ''; log.hidden = false; }
@@ -25166,7 +25177,9 @@ async function startTrackDownload() {
     });
   }
   var logText = '';
-  var result = await api.downloadTrack(query, dir || undefined);
+  var result = useYtdl
+    ? await api.downloadYtdl(url, dir || undefined)
+    : await api.downloadTrack(query, dir || undefined);
   if (_downloadProgressUnlisten) { _downloadProgressUnlisten(); _downloadProgressUnlisten = null; }
   if (log) logText = log.textContent || '';
   if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
