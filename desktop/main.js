@@ -1396,6 +1396,10 @@ ipcMain.handle('mineradio-download-ytdl', async (event, url, outputDir, jobId) =
 ipcMain.handle('mineradio-download-track', async (event, query, outputDir, jobId) => {
   const os = require('os');
   const dir = outputDir || path.join(os.homedir(), 'Music');
+  const imageExts = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']);
+  const imagesBefore = new Set(
+    fs.readdirSync(dir).filter(f => imageExts.has(path.extname(f).toLowerCase()))
+  );
   return new Promise((resolve) => {
     const sendLine = (line) => {
       try { event.sender.send('mineradio-download-progress', { jobId, line }); } catch (_) {}
@@ -1403,12 +1407,17 @@ ipcMain.handle('mineradio-download-track', async (event, query, outputDir, jobId
     const isYouTubeUrl = /youtube\.com|youtu\.be/.test(query);
     const args = ['download', query, '--output', dir, '--generate-lrc'];
     if (isYouTubeUrl) args.push('--audio', 'youtube');
-    const proc = spawn('spotdl', args, {
-      env: { ...process.env },
-    });
+    const proc = spawn('spotdl', args, { env: { ...process.env } });
     proc.stdout.on('data', (chunk) => chunk.toString().split('\n').filter(Boolean).forEach(sendLine));
     proc.stderr.on('data', (chunk) => chunk.toString().split('\n').filter(Boolean).forEach(sendLine));
-    proc.on('close', (code) => resolve({ ok: code === 0, code }));
+    proc.on('close', (code) => {
+      try {
+        fs.readdirSync(dir)
+          .filter(f => imageExts.has(path.extname(f).toLowerCase()) && !imagesBefore.has(f))
+          .forEach(f => { try { fs.unlinkSync(path.join(dir, f)); } catch (_) {} });
+      } catch (_) {}
+      resolve({ ok: code === 0, code });
+    });
     proc.on('error', (err) => resolve({ ok: false, error: err.message }));
   });
 });
