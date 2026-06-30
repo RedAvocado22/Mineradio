@@ -1377,13 +1377,13 @@ ipcMain.handle('mineradio-wallpaper-update', async (_event, payload) => {
   }
 });
 
-ipcMain.handle('mineradio-download-ytdl', async (event, url, outputDir) => {
+ipcMain.handle('mineradio-download-ytdl', async (event, url, outputDir, jobId) => {
   const os = require('os');
   const dir = outputDir || path.join(os.homedir(), 'Music');
   const script = path.join(__dirname, '..', 'tools', 'ytdl_with_lyrics.py');
   return new Promise((resolve) => {
     const sendLine = (line) => {
-      try { event.sender.send('mineradio-download-progress', line); } catch (_) {}
+      try { event.sender.send('mineradio-download-progress', { jobId, line }); } catch (_) {}
     };
     const proc = spawn('python3', [script, url, dir], { env: { ...process.env } });
     proc.stdout.on('data', (chunk) => chunk.toString().split('\n').filter(Boolean).forEach(sendLine));
@@ -1393,12 +1393,12 @@ ipcMain.handle('mineradio-download-ytdl', async (event, url, outputDir) => {
   });
 });
 
-ipcMain.handle('mineradio-download-track', async (event, query, outputDir) => {
+ipcMain.handle('mineradio-download-track', async (event, query, outputDir, jobId) => {
   const os = require('os');
   const dir = outputDir || path.join(os.homedir(), 'Music');
   return new Promise((resolve) => {
     const sendLine = (line) => {
-      try { event.sender.send('mineradio-download-progress', line); } catch (_) {}
+      try { event.sender.send('mineradio-download-progress', { jobId, line }); } catch (_) {}
     };
     const isYouTubeUrl = /youtube\.com|youtu\.be/.test(query);
     const args = ['download', query, '--output', dir, '--generate-lrc'];

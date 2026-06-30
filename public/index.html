@@ -2596,12 +2596,11 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
       <input id="download-dir-input" type="text" autocomplete="off"
         style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;font-family:inherit;outline:none">
     </div>
-    <div id="download-log" hidden
-      style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.65);max-height:160px;overflow-y:auto;margin-bottom:14px;white-space:pre-wrap;word-break:break-all"></div>
-    <div class="btn-row">
+    <div class="btn-row" style="margin-bottom:0">
       <button class="modal-btn" onclick="closeDownloadModal()">Close</button>
       <button id="download-start-btn" class="modal-btn primary" onclick="startTrackDownload()">Download</button>
     </div>
+    <div id="download-jobs" style="display:none;margin-top:14px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -7347,6 +7346,7 @@ var stageLyrics = {
   starRiverHeight: 0.58,
   lockFitScale: 1,
   snapCameraLockFrames: 0,
+  prefetchCache: {},
 };
 var lyricSunColor = new THREE.Color(0xffe6a4);
 var lyricSunHotColor = new THREE.Color(0xfff4cc);
@@ -9347,7 +9347,10 @@ function showStageLine(text, redrawOnly) {
     stageLyrics.outgoing.push(stageLyrics.current);
   }
   stageLyrics.currentText = text;
-  var mesh = buildLyricMesh(text);
+  var pc = stageLyrics.prefetchCache;
+  var cached = !redrawOnly && pc[text] ? pc[text] : null;
+  if (cached) delete pc[text];
+  var mesh = cached || buildLyricMesh(text);
   stageLyrics.group.add(mesh);
   stageLyrics.current = mesh;
 }
@@ -9366,6 +9369,8 @@ function clearStageLyrics() {
   stageLyrics.currentIdx = -1;
   stageLyrics.currentText = '';
   while (stageLyrics.outgoing.length) disposeLyricMesh(stageLyrics.outgoing.pop());
+  var pc = stageLyrics.prefetchCache;
+  for (var k in pc) { if (pc[k]) disposeLyricMesh(pc[k]); delete pc[k]; }
 }
 
 function updateStageLyrics3D(dt) {
@@ -9526,7 +9531,7 @@ function updateStageLyrics3D(dt) {
   }
   function tickMesh(mesh, isCurrent) {
     if (!mesh) return false;
-    mesh.userData.age += dt;
+    mesh.userData.age += Math.min(dt, 0.050);
     var a = Math.min(1, mesh.userData.age / (isCurrent ? 0.52 : 0.38));
     a = a * a * (3 - 2 * a);
     var data = mesh.userData.lyric || {};
@@ -9725,6 +9730,27 @@ function tickLyricsParticles() {
   if (newIdx !== stageLyrics.currentIdx) {
     stageLyrics.currentIdx = newIdx;
     showStageLine(lyricsLines[newIdx].text || '');
+    var pc = stageLyrics.prefetchCache;
+    var nextText = lyricsLines[newIdx + 1] && lyricsLines[newIdx + 1].text;
+    for (var _k in pc) { if (_k !== nextText) { if (pc[_k]) disposeLyricMesh(pc[_k]); delete pc[_k]; } }
+    if (nextText && !Object.prototype.hasOwnProperty.call(pc, nextText)) {
+      pc[nextText] = null;
+      (function(txt) {
+        setTimeout(function() {
+          if (!stageLyrics.group || pc[txt] !== null) return;
+          var m = buildLyricMesh(txt);
+          if (renderer && renderer.initTexture) {
+            var ld = m.userData.lyric;
+            if (ld) {
+              if (ld.textMat && ld.textMat.uniforms.uMap && ld.textMat.uniforms.uMap.value) renderer.initTexture(ld.textMat.uniforms.uMap.value);
+              if (ld.glowMat && ld.glowMat.map) renderer.initTexture(ld.glowMat.map);
+              if (ld.readabilityMat && ld.readabilityMat.map) renderer.initTexture(ld.readabilityMat.map);
+            }
+          }
+          pc[txt] = m;
+        }, 300);
+      })(nextText);
+    }
   }
   if (stageLyrics.current) {
     var curLine = lyricsLines[newIdx] || { t:t };
@@ -25133,6 +25159,9 @@ function showToast(msg) {
 }
 
 var _downloadProgressUnlisten = null;
+var _downloadJobCounter = 0;
+var _downloadProgressUnlisten = null;
+
 function openDownloadModal() {
   var modal = document.getElementById('download-track-modal');
   if (!modal) return;
@@ -25143,63 +25172,83 @@ function openDownloadModal() {
     try { var parsed = JSON.parse(saved); dirInput.value = (parsed && parsed.path) ? parsed.path : homedir + '/Music'; }
     catch(_) { dirInput.value = homedir + '/Music'; }
   }
-  var log = document.getElementById('download-log');
-  if (log) { log.textContent = ''; log.hidden = true; }
   modal.classList.add('show');
   setTimeout(function(){ var q = document.getElementById('download-query-input'); if(q) q.focus(); }, 80);
 }
 function closeDownloadModal() {
   var modal = document.getElementById('download-track-modal');
   if (modal) modal.classList.remove('show');
-  if (_downloadProgressUnlisten) { _downloadProgressUnlisten(); _downloadProgressUnlisten = null; }
+}
+function _ensureDownloadListener() {
+  if (_downloadProgressUnlisten) return;
+  var api = desktopLocalMusicApi();
+  if (!api || typeof api.onDownloadProgress !== 'function') return;
+  _downloadProgressUnlisten = api.onDownloadProgress(function(data) {
+    var logEl = document.getElementById('dl-log-' + data.jobId);
+    if (!logEl) return;
+    logEl.textContent += data.line + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  });
+}
+function _addDownloadJob(jobId, label) {
+  var container = document.getElementById('download-jobs');
+  if (!container) return;
+  container.style.display = 'flex';
+  var job = document.createElement('div');
+  job.id = 'dl-job-' + jobId;
+  job.style.cssText = 'border:1px solid rgba(255,255,255,.10);border-radius:8px;overflow:hidden;flex-shrink:0';
+  job.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;user-select:none" onclick="var l=document.getElementById(\'dl-log-' + jobId + '\');l.style.display=l.style.display===\'none\'?\'block\':\'none\'">' +
+      '<span id="dl-icon-' + jobId + '" style="font-size:13px">⏳</span>' +
+      '<span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.80)">' + label.replace(/</g,'&lt;') + '</span>' +
+      '<span style="font-size:10px;color:rgba(255,255,255,.28)">▾</span>' +
+    '</div>' +
+    '<div id="dl-log-' + jobId + '" style="display:none;background:rgba(0,0,0,.38);padding:8px 10px;font-size:10px;font-family:monospace;color:rgba(255,255,255,.55);max-height:110px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>';
+  container.appendChild(job);
+  container.scrollTop = container.scrollHeight;
+}
+function _finishDownloadJob(jobId, ok) {
+  var icon = document.getElementById('dl-icon-' + jobId);
+  if (icon) icon.textContent = ok ? '✓' : '✗';
+  var job = document.getElementById('dl-job-' + jobId);
+  if (job) job.style.borderColor = ok ? 'rgba(0,245,150,.28)' : 'rgba(255,80,80,.28)';
+  var log = document.getElementById('dl-log-' + jobId);
+  if (log) { log.textContent += ok ? '\n✓ Done!\n' : '\n✗ Failed\n'; log.style.display = 'block'; log.scrollTop = log.scrollHeight; }
 }
 async function startTrackDownload() {
   var api = desktopLocalMusicApi();
-  if (!api || typeof api.downloadTrack !== 'function') {
-    showToast('Download not available (desktop only)');
-    return;
-  }
+  if (!api || typeof api.downloadTrack !== 'function') { showToast('Download not available (desktop only)'); return; }
   var url = ((document.getElementById('download-url-input') || {}).value || '').trim();
   var query = ((document.getElementById('download-query-input') || {}).value || '').trim();
   var dir = ((document.getElementById('download-dir-input') || {}).value || '').trim();
-  var useYtdl = !!url;
   if (!url && !query) { showToast('Enter a YouTube link or song name'); return; }
-  var log = document.getElementById('download-log');
-  var btn = document.getElementById('download-start-btn');
-  if (log) { log.textContent = ''; log.hidden = false; }
-  if (btn) { btn.disabled = true; btn.textContent = 'Downloading…'; }
-  if (_downloadProgressUnlisten) { _downloadProgressUnlisten(); _downloadProgressUnlisten = null; }
-  if (typeof api.onDownloadProgress === 'function') {
-    _downloadProgressUnlisten = api.onDownloadProgress(function(line) {
-      if (!log) return;
-      log.textContent += line + '\n';
-      log.scrollTop = log.scrollHeight;
-    });
-  }
-  var logText = '';
-  var result = useYtdl
-    ? await api.downloadYtdl(url, dir || undefined)
-    : await api.downloadTrack(query, dir || undefined);
-  if (_downloadProgressUnlisten) { _downloadProgressUnlisten(); _downloadProgressUnlisten = null; }
-  if (log) logText = log.textContent || '';
-  if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
-  var hasError = !result || !result.ok
-    || (!useYtdl && /no results found|lookuperror/i.test(logText));
-  if (!hasError) {
-    if (log) log.textContent += '\n✓ Done! Rescanning library…\n';
-    showToast('Download complete — refreshing library');
-    if (dir && typeof api.scanLocalMusicFolder === 'function') {
-      try {
-        var scan = await api.scanLocalMusicFolder(dir);
-        if (scan && scan.ok && scan.files) {
-          await handleLocalFolderFiles(scan.files, { folderOnly: true, folderPath: scan.folderPath || dir, persist: true, autoPlay: false });
-        }
-      } catch(e) { console.warn('[Download rescan]', e); }
+  var useYtdl = !!url;
+  var label = url ? (url.length > 48 ? url.substring(0, 48) + '…' : url) : query;
+  var jobId = ++_downloadJobCounter;
+  document.getElementById('download-url-input').value = '';
+  document.getElementById('download-query-input').value = '';
+  _addDownloadJob(jobId, label);
+  _ensureDownloadListener();
+  (async function() {
+    var result = useYtdl
+      ? await api.downloadYtdl(url, dir || undefined, jobId)
+      : await api.downloadTrack(query, dir || undefined, jobId);
+    var logEl = document.getElementById('dl-log-' + jobId);
+    var logText = logEl ? logEl.textContent : '';
+    var hasError = !result || !result.ok || (!useYtdl && /no results found|lookuperror/i.test(logText));
+    _finishDownloadJob(jobId, !hasError);
+    if (!hasError) {
+      showToast(label + ' — done');
+      if (dir && typeof api.scanLocalMusicFolder === 'function') {
+        try {
+          var scan = await api.scanLocalMusicFolder(dir);
+          if (scan && scan.ok && scan.files) await handleLocalFolderFiles(scan.files, { folderOnly: true, folderPath: scan.folderPath || dir, persist: true, autoPlay: false });
+        } catch(e) {}
+      }
+    } else {
+      showToast(label + ' — failed');
     }
-  } else {
-    if (log) log.textContent += '\n✗ Not found or download failed — try a different search query\n';
-    showToast('Download failed — song not found on Spotify');
-  }
+  })();
 }
 
 var visualGuideSteps = [

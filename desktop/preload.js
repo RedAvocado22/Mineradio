@@ -54,11 +54,11 @@ contextBridge.exposeInMainWorld('desktopWindow', {
   readLocalFileRange: (filePath, start, end) => ipcRenderer.invoke('mineradio-local-file-read-range', filePath, start, end),
   readLocalFileDataUrl: (filePath) => ipcRenderer.invoke('mineradio-local-file-read-data-url', filePath),
   homedir: () => require('os').homedir(),
-  downloadYtdl: (url, outputDir) => ipcRenderer.invoke('mineradio-download-ytdl', url, outputDir),
-  downloadTrack: (query, outputDir) => ipcRenderer.invoke('mineradio-download-track', query, outputDir),
+  downloadYtdl: (url, outputDir, jobId) => ipcRenderer.invoke('mineradio-download-ytdl', url, outputDir, jobId),
+  downloadTrack: (query, outputDir, jobId) => ipcRenderer.invoke('mineradio-download-track', query, outputDir, jobId),
   onDownloadProgress: (callback) => {
     if (typeof callback !== 'function') return () => {};
-    const listener = (_event, line) => callback(line);
+    const listener = (_event, data) => callback(data);
     ipcRenderer.on('mineradio-download-progress', listener);
     return () => ipcRenderer.removeListener('mineradio-download-progress', listener);
   },
